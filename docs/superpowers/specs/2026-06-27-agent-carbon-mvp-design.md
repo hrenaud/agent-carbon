@@ -145,3 +145,18 @@ Le registre `main` couvrant déjà les modèles actuels, ce module devient un **
 ## Hors MVP (assumé, posé en coutures)
 
 Inférence locale (câblage + facteur Wh/token Apple Silicon), **énergie du poste de travail** (durée de session × puissance × grille — placeholder séparé, **jamais agrégé au total d'impact**, étiqueté de ses caveats : la durée wall-clock est surtout du temps mort, et la conso du poste n'est pas marginale à l'usage IA ; ordre de grandeur ~0,3–2 % du cloud), terminal utilisateur, backfill `carbon.db`, mode live, export fichier (md/json), **« équivalents parlants »** dans le rapport (km voiture, etc. — type CodeCarbon, mis de côté pour éviter la fausse précision sur une fourchette) — tous **posés en placeholders**, **aucun implémenté** dans le MVP.
+
+## Maintenance — suivi de version EcoLogits (post-MVP)
+
+Objectif : **détecter** les nouvelles versions d'EcoLogits automatiquement, mais les **adopter délibérément** (jamais de bump silencieux qui changerait tous les chiffres — cf. principe de méthodologie versionnée / trou #6).
+
+Contrainte : EcoLogits **n'est plus publié sur PyPI depuis 0.8.2** ; les versions récentes n'existent qu'en **tags git**. Dependabot (pip) ne les voit donc pas.
+
+Procédé retenu (à implémenter **après** le MVP) : un **GitHub Action planifié** (hebdomadaire) qui
+
+1. interroge l'API des tags de `mlco2/ecologits` ;
+2. si un tag est plus récent que notre pin → **ouvre une PR** bumpant le pin ;
+3. la CI de la PR exécute le **test de non-régression du spike** (5 critères sur `claude-opus-4-8`) **+ un diff de recalcul** sur un fixture (montre de combien les valeurs bougent) ;
+4. **revue humaine + merge** → incrémente `methodology_version`.
+
+Détection automatique, adoption humaine. Pas d'auto-merge, pas de service tiers. (Renovate sait suivre des tags git, mais pour une seule dépendance git le GHA maison est plus simple.)
