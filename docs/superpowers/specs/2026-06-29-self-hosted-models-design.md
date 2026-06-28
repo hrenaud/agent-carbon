@@ -23,7 +23,7 @@ La **philosophie d'incertitude** du projet s'applique : ce qu'on ne connaît pas
 | 3   | Mix électrique            | **Détecter + confirmer** : locale/fuseau → pays → ISO-3, proposé puis confirmé. Persisté. Repli : choix dans une liste                |
 | 4   | PUE / WUE                 | **Jamais obligatoires**. Plage par défaut « inconnu » **PUE 1.1–1.5**, **WUE 0**. Configurables → la fourchette se resserre si connus |
 | 5   | Format du nom de modèle   | **Tolérant** : nom tenté tel quel comme `repo_id` HF ; sinon échec propre → tier 3. Pas de mapping exotique (format runtime non figé) |
-| 6   | Persistance config        | Nouveau `~/.agent-carbon/config.toml` (la `Config` était recréée à vide à chaque run)                                                 |
+| 6   | Persistance config        | Nouveau `~/.agent-carbon/config.json` (JSON = stdlib lecture+écriture, 0 dépendance ; la `Config` recréée à vide à chaque run)        |
 | 7   | File d'attente            | **Table SQLite** `pending_models` dans `carbon.db`                                                                                    |
 | 8   | Skill de réglage          | **`agent-carbon-config`** (périmètre large : mix + PUE/WUE + réglages futurs)                                                         |
 
@@ -49,9 +49,9 @@ Les 3 premiers tiers renvoient un `ParamsResult(active, total, source)`. Le 4e r
 
 ## Composants
 
-### 1. Config persistée — `agent_carbon/config.py` (+ chargement TOML)
+### 1. Config persistée — `agent_carbon/config.py` (+ chargement JSON)
 
-`Config` gagne le chargement/sauvegarde depuis `~/.agent-carbon/config.toml`. Champs :
+`Config` gagne le chargement/sauvegarde depuis `~/.agent-carbon/config.json`. Champs :
 
 | champ                  | défaut          | rôle                                                               |
 | ---------------------- | --------------- | ------------------------------------------------------------------ |
@@ -71,7 +71,7 @@ Les 3 premiers tiers renvoient un `ParamsResult(active, total, source)`. Le 4e r
 1. lire la locale / le fuseau système → code pays alpha-2 ;
 2. mapper alpha-2 → ISO-3 (table des pays courants ; sinon repli liste) ;
 3. proposer la valeur, l'utilisateur confirme ou corrige ;
-4. persister dans `config.toml`.
+4. persister dans `config.json`.
 
 ### 3. Résolution des params — `agent_carbon/impact/params.py`
 
@@ -109,7 +109,7 @@ Skill dédié pour voir/changer `electricity_mix_zone`, `datacenter_pue`, `datac
 
 ```
 ingest / report / statusline
-   ↓ Config.load(~/.agent-carbon/config.toml)   ── zone None ? → (report interactif) détection mix
+   ↓ Config.load(~/.agent-carbon/config.json)   ── zone None ? → (report interactif) détection mix
 InferenceEvent[]
    ↓ EcoLogitsEngine.compute()
        Tier 1 registre ─┐ trouvé → llm_impacts()
@@ -129,7 +129,7 @@ ImpactRecord[]  (min/max, plage PUE incluse)
 
 | Cible                        | Vérifie                                                                           |
 | ---------------------------- | --------------------------------------------------------------------------------- |
-| Persistance config           | round-trip load/save TOML ; défauts ; sentinelle `zone = None`                    |
+| Persistance config           | round-trip load/save JSON ; défauts ; sentinelle `zone = None`                    |
 | Détection mix                | mapping alpha-2 → ISO-3 ; repli liste quand détection impossible                  |
 | `ModelParamsResolver` tier 1 | modèle connu du registre → params attendus                                        |
 | `ModelParamsResolver` tier 2 | modèle dans `config.model_params` → court-circuite HF                             |
