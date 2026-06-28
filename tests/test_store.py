@@ -34,6 +34,33 @@ def test_session_duration_computed(tmp_path):
     assert store.total_duration_seconds() == 600.0  # 10 min entre u1 et u2
 
 
+def test_intensity_by_model(tmp_path):
+    store = SQLiteStore(str(tmp_path / "c.db"))
+    # 1 h de temps actif (3600 s), 600 tokens de sortie
+    events = [
+        InferenceEvent("anthropic", "claude-opus-4-8", 100, 600, 0, 0,
+                       "2026-06-27T10:00:00.000Z", "p", "s", "u1", active_seconds=3600.0),
+    ]
+    store.ingest(events, _engine(), Config())
+    data = store.intensity_by_model()
+    assert len(data) == 1
+    d = data[0]
+    assert d["model"] == "claude-opus-4-8"
+    assert abs(d["hours"] - 1.0) < 0.01
+    assert d["tokens"] == 600
+    assert d["gwp"] > 0
+
+
+def test_intensity_excludes_events_without_active_time(tmp_path):
+    store = SQLiteStore(str(tmp_path / "c.db"))
+    events = [
+        InferenceEvent("anthropic", "claude-opus-4-8", 100, 600, 0, 0,
+                       "2026-06-27T10:00:00.000Z", "p", "s", "u1"),  # active_seconds=0
+    ]
+    store.ingest(events, _engine(), Config())
+    assert store.intensity_by_model() == []
+
+
 def test_rows_for_report_filters_by_session(tmp_path):
     store = SQLiteStore(str(tmp_path / "c.db"))
     events = [

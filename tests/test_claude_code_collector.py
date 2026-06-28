@@ -7,7 +7,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def test_parses_only_assistant_messages_with_usage():
-    events = list(ClaudeCodeCollector(str(FIXTURES)).collect())
+    events = list(ClaudeCodeCollector(str(FIXTURES / "sample.jsonl")).collect())
     assert len(events) == 2  # la ligne user est ignorée
 
 
@@ -22,6 +22,13 @@ def test_event_fields_mapped_from_real_structure():
     assert e.cache_creation_tokens == 7052
     assert e.project == "projA"          # basename de cwd
     assert e.session_id == "sess-A"
+
+
+def test_active_seconds_from_timestamp_delta():
+    # delta de 30 s entre le message user et la réponse assistant
+    events = list(ClaudeCodeCollector(str(FIXTURES / "active.jsonl")).collect())
+    assert len(events) == 1
+    assert abs(events[0].active_seconds - 30.0) < 0.01
 
 
 def test_collect_from_single_file():

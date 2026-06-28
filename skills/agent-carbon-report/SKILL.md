@@ -23,6 +23,8 @@ AC="$(command -v agent-carbon || echo "$HOME/.agent-carbon/src/.venv/bin/agent-c
    - total global → `"$AC" report --by total`
    - sur une période → ajouter `--since <ISO8601>` (ex. `--since 2026-06-01T00:00:00Z`)
 
-3. Présenter le graphe **sans le déformer** (bloc de code monospace pour garder l'alignement), puis rappeler en une phrase :
+3. Avec `--by model`, le rapport inclut une section **« Intensité par modèle »** (tokens/h et émissions/h par heure de travail effectif) qui compare l'efficacité des modèles — la présenter aussi.
+
+4. Présenter le graphe **sans le déformer** (bloc de code monospace pour garder l'alignement), puis rappeler en une phrase :
    - la valeur centrale est marquée `~` (approximative) ; la section « Impact total » donne la **plage min–max** à côté (incertitude irréductible sur la région datacenter) ;
    - les modèles **locaux ou tiers non modélisés** sont comptés mais sans impact estimé (cf. ligne « non couverts »).

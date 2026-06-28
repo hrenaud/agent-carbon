@@ -102,6 +102,47 @@ def _disp(name: str, group_by: str) -> str:
     return _short_model(name) if group_by == "model" else name
 
 
+def _kilo(n: float) -> str:
+    if n >= 1e6:
+        return f"~{n / 1e6:.1f}M"
+    if n >= 1e3:
+        return f"~{n / 1e3:.0f}k"
+    return f"~{n:.0f}"
+
+
+def render_intensity(rows: list[dict]) -> str:
+    """Intensité par modèle, par heure de travail effectif : une barre visualise
+    le débit de tokens/h, suivie des 5 critères d'émission /h."""
+    if not rows:
+        return ""
+    data = [{"name": _short_model(r["model"]),
+             "tph": r["tokens"] / r["hours"],
+             "perh": {c: r[c] / r["hours"] for c in CRITERIA}} for r in rows]
+    data.sort(key=lambda d: d["tph"], reverse=True)
+    max_tph = max(d["tph"] for d in data) or 1.0
+    name_w = max(len(d["name"]) for d in data)
+    tph_w = max(len(_kilo(d["tph"])) for d in data)
+
+    out = ["Intensité par modèle — par heure de travail effectif (temps actif)", ""]
+    for d in data:
+        share = d["tph"] / max_tph
+        filled = min(_BAR_WIDTH, round(share * _BAR_WIDTH))
+        bar = "█" * filled + " " * (_BAR_WIDTH - filled)
+        gfac, gunit = _scale(d["perh"]["gwp"], "gwp")
+        # ligne 1 : barre (alignée, aucun émoji avant) du débit tokens/h + GWP/h
+        out.append(
+            f"  {d['name'].ljust(name_w)}  {bar}  {_kilo(d['tph']).rjust(tph_w)} tok/h  "
+            f"🌍 ~{d['perh']['gwp'] * gfac:.3g} {gunit}/h"
+        )
+        # ligne 2 : les 4 autres critères /h
+        others = []
+        for c in ("energy", "wcf", "adpe", "pe"):
+            f, u = _scale(d["perh"][c], c)
+            others.append(f"{_ICON[c]} ~{d['perh'][c] * f:.3g} {u}/h")
+        out.append(" " * (name_w + 4) + "  ".join(others))
+    return "\n".join(out)
+
+
 def render_report(rows: list[dict], group_by: str) -> str:
     groups: dict[str, dict[str, list[float]]] = {}
     for row in rows:

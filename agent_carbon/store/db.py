@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS events (
   input_tokens INTEGER, output_tokens INTEGER,
   cache_creation_tokens INTEGER, cache_read_tokens INTEGER,
   timestamp TEXT, project TEXT,
+  active_seconds REAL DEFAULT 0,
   PRIMARY KEY (session_id, msg_id)
 );
 CREATE TABLE IF NOT EXISTS impacts (
@@ -42,6 +43,11 @@ class SQLiteStore:
         self.conn = sqlite3.connect(path)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(_SCHEMA)
+        # Migration : colonne active_seconds sur une DB pré-existante.
+        try:
+            self.conn.execute("ALTER TABLE events ADD COLUMN active_seconds REAL DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass  # colonne déjà présente
         self.conn.commit()
 
     def import_legacy(self, carbon_db_path: str):
@@ -52,14 +58,21 @@ class SQLiteStore:
         new_count = 0
         for e in events:
             cur = self.conn.execute(
-                "INSERT OR IGNORE INTO events VALUES (?,?,?,?,?,?,?,?,?,?)",
+                "INSERT OR IGNORE INTO events VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                 (e.session_id, e.msg_id, e.provider, e.model,
                  e.input_tokens, e.output_tokens,
                  e.cache_creation_tokens, e.cache_read_tokens,
-                 e.timestamp, e.project),
+                 e.timestamp, e.project, e.active_seconds),
             )
             if cur.rowcount == 0:
-                continue  # déjà ingéré → idempotent
+                # déjà ingéré → idempotent ; on backfille juste active_seconds
+                # (colonne ajoutée après coup) sans recalculer l'impact.
+                self.conn.execute(
+                    "UPDATE events SET active_seconds=? "
+                    "WHERE session_id=? AND msg_id=? AND active_seconds=0",
+                    (e.active_seconds, e.session_id, e.msg_id),
+                )
+                continue
             new_count += 1
             self._store_impact(e, engine.compute(e, config))
             self._touch_session(e)
@@ -114,6 +127,38 @@ class SQLiteStore:
             sql += " AND e.session_id = ?"
             params.append(session_id)
         return [dict(r) for r in self.conn.execute(sql, tuple(params)).fetchall()]
+
+    def intensity_by_model(self) -> list[dict]:
+        """Par modèle, sur les seuls messages à temps actif mesuré (>0) et
+        impact estimé : heures actives, tokens de sortie, et valeur centrale
+        des 5 critères. Permet de calculer tok/h et impact/h."""
+        sql = (
+            "SELECT e.model AS model, SUM(e.active_seconds) AS sec, "
+            "SUM(e.output_tokens) AS toks, "
+            "SUM(i.energy_min) AS emin, SUM(i.energy_max) AS emax, "
+            "SUM(i.gwp_min) AS gmin, SUM(i.gwp_max) AS gmax, "
+            "SUM(i.adpe_min) AS amin, SUM(i.adpe_max) AS amax, "
+            "SUM(i.pe_min) AS pmin, SUM(i.pe_max) AS pmax, "
+            "SUM(i.wcf_min) AS wmin, SUM(i.wcf_max) AS wmax "
+            "FROM events e JOIN impacts i "
+            "ON e.session_id=i.session_id AND e.msg_id=i.msg_id "
+            "WHERE i.error IS NULL AND e.active_seconds > 0 "
+            "GROUP BY e.model"
+        )
+        out = []
+        for r in self.conn.execute(sql):
+            hours = (r["sec"] or 0) / 3600.0
+            if hours <= 0:
+                continue
+            out.append({
+                "model": r["model"], "hours": hours, "tokens": r["toks"],
+                "energy": (r["emin"] + r["emax"]) / 2,
+                "gwp": (r["gmin"] + r["gmax"]) / 2,
+                "adpe": (r["amin"] + r["amax"]) / 2,
+                "pe": (r["pmin"] + r["pmax"]) / 2,
+                "wcf": (r["wmin"] + r["wmax"]) / 2,
+            })
+        return out
 
     def coverage(self) -> dict:
         """Couverture de mesure : total, mesurés (impact estimé), non couverts

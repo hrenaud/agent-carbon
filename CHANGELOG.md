@@ -15,6 +15,7 @@ Toutes les évolutions notables du projet. Format inspiré de [Keep a Changelog]
 - **Skill `/agent-carbon-report`** (`skills/`) déployé par l'installeur dans `~/.claude/skills/`.
 - **Script `scripts/statusline.sh`** : statusLine via script versionné (résilient) plutôt qu'une commande inline.
 - **Sortie d'ingestion** : résumé de couverture clair (`mesurés` / `non couverts`) ; les warnings bruts d'EcoLogits sont silencés (information conservée par record) pour ne pas faire craindre un plantage.
+- **Intensité par modèle** : nouvelle section du rapport (`--by model`) — par **heure de travail effectif** (temps actif estimé depuis les deltas de timestamps, plafonné à 5 min/message), **débit tokens/h** (barre de visualisation) et les **5 émissions/h**. Révèle l'efficacité comparée (ex. une heure d'Opus émet ~80× plus qu'une heure d'Haiku). Nouvelle colonne `events.active_seconds`, rétro-remplie à la ré-ingestion.
 
 ### Modifié
 

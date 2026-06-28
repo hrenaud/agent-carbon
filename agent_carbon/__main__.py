@@ -7,7 +7,7 @@ from agent_carbon.collectors.claude_code import ClaudeCodeCollector
 from agent_carbon.config import Config
 from agent_carbon.impact.engine import EcoLogitsEngine
 from agent_carbon.impact.resolver import ModelResolver
-from agent_carbon.report.cli import render_report
+from agent_carbon.report.cli import render_intensity, render_report
 from agent_carbon.statusline.line import render_statusline
 from agent_carbon.store.db import SQLiteStore
 
@@ -79,7 +79,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "report":
         store = _store(args.db)
-        print(render_report(store.rows_for_report(args.since), group_by=args.by))
+        out = render_report(store.rows_for_report(args.since), group_by=args.by)
+        if args.by == "model":
+            intensity = render_intensity(store.intensity_by_model())
+            if intensity:
+                out += "\n\n" + intensity
+        print(out)
         return 0
 
     if args.cmd == "statusline":

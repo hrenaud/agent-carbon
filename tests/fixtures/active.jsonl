@@ -1,0 +1,2 @@
+{"type":"user","message":{"role":"user","content":"go"},"sessionId":"s1","uuid":"a0","cwd":"/x/proj","timestamp":"2026-06-27T10:00:00.000Z"}
+{"type":"assistant","message":{"model":"claude-opus-4-8","usage":{"input_tokens":100,"output_tokens":300,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}},"sessionId":"s1","uuid":"a1","cwd":"/x/proj","timestamp":"2026-06-27T10:00:30.000Z"}

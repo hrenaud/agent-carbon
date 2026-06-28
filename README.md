@@ -33,7 +33,9 @@ Variables optionnelles : `AGENT_CARBON_DIR`, `AGENT_CARBON_DB`, `AGENT_CARBON_RE
 # Parser les transcripts et remplir la base de données
 agent-carbon ingest [--source ~/.claude/projects] [--db ~/.agent-carbon/carbon.db]
 
-# Afficher le rapport multi-critères (valeur centrale ~ + plage min–max dans la même section)
+# Afficher le rapport multi-critères (valeur centrale ~ + plage min–max dans la même section).
+# Avec --by model, une section « Intensité par modèle » donne tokens/h et émissions/h
+# par heure de travail effectif (compare l'efficacité des modèles).
 agent-carbon report [--db ~/.agent-carbon/carbon.db] [--by model|project|total] [--since ISO8601]
 
 # Afficher une ligne compacte pour la statusline

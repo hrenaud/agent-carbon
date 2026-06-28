@@ -15,3 +15,4 @@ class InferenceEvent:
     project: str
     session_id: str
     msg_id: str             # unique par message → clé d'idempotence
+    active_seconds: float = 0.0  # temps actif estimé (delta depuis le message précédent)

@@ -9,7 +9,7 @@ def test_ingest_then_report(tmp_path, capsys):
     rc = main(["ingest", "--source", str(FIXTURES), "--db", db])
     assert rc == 0
     out = capsys.readouterr().out
-    assert "2 events" in out
+    assert "3 events" in out  # sample.jsonl (2) + active.jsonl (1)
 
     rc = main(["report", "--db", db, "--by", "model"])
     assert rc == 0

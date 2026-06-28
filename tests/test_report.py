@@ -1,4 +1,4 @@
-from agent_carbon.report.cli import render_report
+from agent_carbon.report.cli import render_intensity, render_report
 
 
 ROWS = [
@@ -80,6 +80,26 @@ def test_tiny_values_scaled_to_readable_units():
     assert "mgSbeq" in out
     assert "4e-05" not in out
     assert "40" in out and "41.6" in out
+
+
+def test_render_intensity_shows_tokens_bar_and_emissions():
+    rows = [
+        {"model": "claude-opus-4-8", "hours": 1.0, "tokens": 566000,
+         "energy": 5.0, "gwp": 1.07, "adpe": 5e-6, "pe": 50.0, "wcf": 9.0},
+        {"model": "claude-haiku-4-5", "hours": 1.0, "tokens": 276000,
+         "energy": 1.0, "gwp": 0.014, "adpe": 1e-6, "pe": 10.0, "wcf": 2.0},
+    ]
+    out = render_intensity(rows)
+    assert "tok/h" in out
+    assert "█" in out                       # barre de visualisation des tokens
+    for icon in ("🌍", "⚡", "💧", "⛏", "🔥"):
+        assert icon in out
+    # trié par tok/h décroissant : opus (566k) avant haiku (276k)
+    assert out.index("opus-4-8") < out.index("haiku-4-5")
+
+
+def test_render_intensity_empty():
+    assert render_intensity([]) == ""
 
 
 def test_negligible_collapses_to_approx_zero():
