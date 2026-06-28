@@ -117,6 +117,19 @@ with open(path, "w", encoding="utf-8") as fh:
     fh.write("\n")
 PY
   ok "Claude Code câblé ($SETTINGS_FILE)"
+
+  # Skills (slash-skills) → ~/.claude/skills (symlinks, se mettent à jour avec le repo).
+  SKILLS_SRC="$INSTALL_DIR/skills"
+  SKILLS_DST="$HOME/.claude/skills"
+  if [ -d "$SKILLS_SRC" ]; then
+    mkdir -p "$SKILLS_DST"
+    for d in "$SKILLS_SRC"/*/; do
+      [ -d "$d" ] || continue
+      name="$(basename "$d")"
+      ln -sfn "$d" "$SKILLS_DST/$name"
+      ok "skill: /$name"
+    done
+  fi
 else
   say "Câblage Claude Code ignoré (AGENT_CARBON_NO_CLAUDE=1)."
 fi
