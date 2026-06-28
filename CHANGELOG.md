@@ -19,7 +19,7 @@ Toutes les évolutions notables du projet. Format inspiré de [Keep a Changelog]
 ### Modifié
 
 - **Statusline** : ajout de l'**eau** (💧 L) à côté de l'énergie et du GWP.
-- **Rapport CLI** : tableau aligné via **`tabulate`** (colonnes numériques à droite) ; **échelle d'unité automatique** pour la lisibilité (ex. `4e-05 kgSbeq` → `40 mgSbeq`) ; section **« Impact total (tous modèles) »** avec les 5 critères et leurs icônes.
+- **Rapport CLI** : tableau aligné via **`tabulate`** (colonnes numériques à droite) ; **échelle d'unité automatique** pour la lisibilité (ex. `4e-05 kgSbeq` → `40 mgSbeq`) ; **largeur réduite** pour ne plus déborder du terminal (noms de modèles raccourcis — `claude-haiku-4-5-20251001` → `haiku-4-5` — et valeurs négligeables affichées `≈0`) ; section **« Impact total (tous modèles) »** avec les 5 critères et leurs icônes.
 
 ### Dépendances
 

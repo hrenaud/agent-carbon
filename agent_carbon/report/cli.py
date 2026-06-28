@@ -1,6 +1,10 @@
+import re
+
 from tabulate import tabulate
 
 from agent_carbon.impact.engine import CRITERIA
+
+_DATE_SUFFIX = re.compile(r"-\d{8}$")
 
 # Échelle d'unité par critère, du plus grand au plus petit (facteur, unité).
 # On choisit l'unité pour que les valeurs tombent dans une plage lisible
@@ -33,7 +37,17 @@ def _scale(hi: float, criterion: str) -> tuple[float, str]:
     return chosen
 
 
+def _short_model(name: str) -> str:
+    """Raccourcit un nom de modèle pour la largeur du tableau :
+    claude-haiku-4-5-20251001 → haiku-4-5."""
+    return _DATE_SUFFIX.sub("", name.removeprefix("claude-"))
+
+
 def _fmt(lo: float, hi: float, factor: float) -> str:
+    # Valeur négligeable (modèle quasi inutilisé) : on évite un long « 0.000x »
+    # qui élargit toute la colonne, on affiche « ≈0 ».
+    if hi * factor < 0.005:
+        return "≈0"
     return f"{lo * factor:.3g}–{hi * factor:.3g}"
 
 
@@ -57,7 +71,8 @@ def render_report(rows: list[dict], group_by: str) -> str:
     # --- Section 1 : tableau aligné (tabulate, colonnes numériques à droite) ---
     headers = ["groupe"] + [f"{_NAME[c]} ({units[c][1]})" for c in CRITERIA]
     body = [
-        [name] + [_fmt(vals[c][0], vals[c][1], units[c][0]) for c in CRITERIA]
+        [_short_model(name) if group_by == "model" else name]
+        + [_fmt(vals[c][0], vals[c][1], units[c][0]) for c in CRITERIA]
         for name, vals in groups.items()
     ]
     if group_by != "total":

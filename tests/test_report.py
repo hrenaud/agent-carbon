@@ -15,8 +15,30 @@ ROWS = [
 
 def test_group_by_model_lists_each_model():
     out = render_report(ROWS, group_by="model")
-    assert "claude-opus-4-8" in out
-    assert "claude-sonnet-4-6" in out
+    # noms raccourcis (préfixe claude- retiré) pour tenir en largeur
+    assert "opus-4-8" in out
+    assert "sonnet-4-6" in out
+
+
+def test_model_names_shortened_in_table():
+    out = render_report(ROWS, group_by="model")
+    table = out.split("Impact total")[0]
+    assert "claude-" not in table
+
+
+def test_negligible_row_collapses_to_approx_zero():
+    rows = [
+        {"model": "claude-opus-4-8", "project": "p",
+         "gwp_min": 8.0, "gwp_max": 13.0, "energy_min": 19.0, "energy_max": 33.0,
+         "adpe_min": 4e-5, "adpe_max": 4.1e-5, "pe_min": 192.0, "pe_max": 335.0,
+         "wcf_min": 61.0, "wcf_max": 135.0},
+        {"model": "claude-opus-4-6", "project": "p",  # négligeable ~1e-10
+         "gwp_min": 2.8e-5, "gwp_max": 5e-5, "energy_min": 6e-5, "energy_max": 1e-4,
+         "adpe_min": 1.5e-10, "adpe_max": 1.6e-10, "pe_min": 6e-4, "pe_max": 1e-3,
+         "wcf_min": 2e-4, "wcf_max": 5e-4},
+    ]
+    out = render_report(rows, group_by="model")
+    assert "≈0" in out
 
 
 def test_total_row_sums_ranges():
@@ -36,7 +58,7 @@ def test_table_columns_are_aligned_on_separators():
     out = render_report(ROWS, group_by="model")
     lines = out.splitlines()
     header = next(line for line in lines if "groupe" in line and "|" in line)
-    data = next(line for line in lines if "claude-sonnet-4-6" in line)
+    data = next(line for line in lines if "sonnet-4-6" in line)
     # tabulate aligne les colonnes : le 1er séparateur tombe à la même position
     assert header.index("|") == data.index("|")
 

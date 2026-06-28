@@ -14,7 +14,7 @@ def test_ingest_then_report(tmp_path, capsys):
     rc = main(["report", "--db", db, "--by", "model"])
     assert rc == 0
     out = capsys.readouterr().out
-    assert "claude-opus-4-8" in out
+    assert "opus-4-8" in out  # nom raccourci dans le tableau
     assert "GWP" in out
 
 
