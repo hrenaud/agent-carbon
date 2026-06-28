@@ -16,7 +16,7 @@ def test_inference_event_holds_normalized_fields():
 
 def test_config_defaults():
     c = Config()
-    assert c.electricity_mix_zone == "USA"
+    assert c.electricity_mix_zone is None
     assert c.throughput_tok_s == 50.0
     assert c.model_aliases == {}
     assert c.local_wh_per_token is None

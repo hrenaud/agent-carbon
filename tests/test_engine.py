@@ -16,7 +16,7 @@ def test_compute_returns_five_positive_ranges():
     for c in CRITERIA:
         lo, hi = rec.totals[c]
         assert hi >= lo > 0
-    assert rec.zone == "USA"
+    assert rec.zone is None
     assert "ecologits=" in rec.methodology_version
 
 

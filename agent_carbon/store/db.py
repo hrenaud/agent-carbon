@@ -28,6 +28,10 @@ CREATE TABLE IF NOT EXISTS impacts (
 CREATE TABLE IF NOT EXISTS sessions (
   session_id TEXT PRIMARY KEY, project TEXT, started_at TEXT, ended_at TEXT
 );
+CREATE TABLE IF NOT EXISTS pending_models (
+  provider TEXT, model TEXT, first_seen TEXT, occurrences INTEGER DEFAULT 0,
+  PRIMARY KEY (provider, model)
+);
 """
 
 
@@ -74,7 +78,10 @@ class SQLiteStore:
                 )
                 continue
             new_count += 1
-            self._store_impact(e, engine.compute(e, config))
+            rec = engine.compute(e, config)
+            self._store_impact(e, rec)
+            if rec.error == "model-params-unresolved":
+                self.add_pending(e.provider, e.model, e.timestamp)
             self._touch_session(e)
         self.conn.commit()
         return new_count
@@ -108,6 +115,26 @@ class SQLiteStore:
             "UPDATE sessions SET started_at=?, ended_at=? WHERE session_id=?",
             (started, ended, e.session_id),
         )
+
+    def add_pending(self, provider: str, model: str, ts: str) -> None:
+        self.conn.execute(
+            "INSERT INTO pending_models (provider, model, first_seen, occurrences) "
+            "VALUES (?,?,?,1) "
+            "ON CONFLICT(provider, model) DO UPDATE SET occurrences = occurrences + 1",
+            (provider, model, ts),
+        )
+        self.conn.commit()
+
+    def list_pending(self) -> list[dict]:
+        return [dict(r) for r in self.conn.execute(
+            "SELECT provider, model, first_seen, occurrences "
+            "FROM pending_models ORDER BY occurrences DESC").fetchall()]
+
+    def clear_pending(self, provider: str, model: str) -> None:
+        self.conn.execute(
+            "DELETE FROM pending_models WHERE provider=? AND model=?",
+            (provider, model))
+        self.conn.commit()
 
     def rows_for_report(self, since: str | None = None,
                         session_id: str | None = None) -> list[dict]:
