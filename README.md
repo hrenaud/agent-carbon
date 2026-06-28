@@ -12,6 +12,18 @@ Issu de l'audit de `claude-carbon` (mono-critère CO₂, facteurs dérivés du p
 
 ## Installation
 
+### Rapide (one-line)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hrenaud/agent-carbon/main/install.sh | bash
+```
+
+L'installeur détecte Python ≥ 3.10, clone le projet dans `~/.agent-carbon/src`, crée un venv et installe EcoLogits (tag `mlco2/ecologits@0.11.0`), expose la commande `agent-carbon` dans `~/.local/bin`, câble la statusline + un hook d'ingestion dans `~/.claude/settings.json` (merge idempotent, ne touche pas à une statusline déjà prise par un autre outil), puis fait une première ingestion.
+
+Variables optionnelles : `AGENT_CARBON_DIR`, `AGENT_CARBON_DB`, `AGENT_CARBON_REF`, `AGENT_CARBON_NO_CLAUDE=1` (ne pas modifier `settings.json`), `AGENT_CARBON_NO_INGEST=1` (pas d'ingestion initiale).
+
+### Manuelle
+
 - **Prérequis** : Python ≥ 3.10
 - **Installation** : `pip install -e .` (installe EcoLogits depuis le tag `mlco2/ecologits@0.11.0`)
 
