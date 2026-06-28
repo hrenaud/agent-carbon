@@ -59,6 +59,35 @@ agent-carbon report --by total
 agent-carbon statusline
 ```
 
+### Couverture (ce que dit la sortie d'`ingest`)
+
+```
+22 events ingérés · 23626/31981 mesurés · 8355 non couverts (inférence locale ou fournisseurs tiers non modélisés — conservés, impact non estimé)
+```
+
+- **mesurés** : impact estimé par EcoLogits.
+- **non couverts** : modèle hors périmètre EcoLogits (inférence locale, fournisseurs tiers) — l'event est **conservé** mais son impact n'est **pas** estimé (afficher faux serait pire). Ces lignes sont exclues des totaux du rapport.
+
+Les warnings bruts d'EcoLogits sont volontairement silencés pendant l'ingestion (l'information reste stockée par record) pour ne pas faire croire à un plantage.
+
+## Skill Claude Code
+
+Le projet fournit le skill **`/agent-carbon-report`** (dans `skills/`). L'installeur le déploie par symlink dans `~/.claude/skills/`. Après redémarrage de Claude Code, taper `/agent-carbon-report` (ou demander « mon impact / mon empreinte ») lance le rapport multi-critères.
+
+## Statusline dans Claude Code
+
+Le câblage passe par le script versionné **`scripts/statusline.sh [DB]`** (résout le binaire, lit la base, résilient — ligne vide plutôt qu'une erreur). L'installeur l'inscrit dans `~/.claude/settings.json` :
+
+- s'il n'y a pas de statusline → il ajoute la nôtre ;
+- si la statusline est déjà à nous → il met à jour le chemin ;
+- si elle appartient à un autre outil → il **n'y touche pas** et affiche la commande à coller pour basculer.
+
+Prévisualiser sans rien changer à sa config :
+
+```bash
+~/.agent-carbon/src/scripts/statusline.sh   # ⚡ 18.7–33.2 kWh · 🌍 7.88–13.5 kgCO2e
+```
+
 ## Sources d'inspiration
 
 - **claude-carbon** — audit d'origine et UX de reporting.
