@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 
 import ecologits
@@ -7,6 +8,12 @@ from agent_carbon import ENGINE_VERSION
 from agent_carbon.config import Config
 from agent_carbon.impact.resolver import ModelResolver
 from agent_carbon.models import InferenceEvent
+
+# EcoLogits émet un `logger.warning_once` par modèle inconnu / architecture non
+# divulguée. En traitement de masse (ingestion), ça inonde la sortie et fait
+# craindre un plantage. On muselle ce logger : l'information n'est pas perdue,
+# elle reste capturée par record dans `ImpactRecord.warnings` / `.error`.
+logging.getLogger("ecologits").setLevel(logging.ERROR)
 
 CRITERIA = ("energy", "gwp", "adpe", "pe", "wcf")
 _EMBODIED_CRITERIA = ("gwp", "adpe", "pe")

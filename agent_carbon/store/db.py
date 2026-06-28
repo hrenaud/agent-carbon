@@ -111,6 +111,15 @@ class SQLiteStore:
             params = (since,)
         return [dict(r) for r in self.conn.execute(sql, params).fetchall()]
 
+    def coverage(self) -> dict:
+        """Couverture de mesure : total, mesurés (impact estimé), non couverts
+        (modèle non modélisé par EcoLogits → event conservé, impact non estimé)."""
+        total = self.conn.execute("SELECT COUNT(*) FROM impacts").fetchone()[0]
+        uncovered = self.conn.execute(
+            "SELECT COUNT(*) FROM impacts WHERE error IS NOT NULL"
+        ).fetchone()[0]
+        return {"total": total, "measured": total - uncovered, "uncovered": uncovered}
+
     def session_count(self) -> int:
         return self.conn.execute("SELECT COUNT(*) FROM sessions").fetchone()[0]
 

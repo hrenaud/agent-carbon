@@ -22,6 +22,16 @@ def _engine(config: Config) -> EcoLogitsEngine:
     return EcoLogitsEngine(ModelResolver(config.model_aliases))
 
 
+def _ingest_summary(new_count: int, cov: dict) -> str:
+    line = f"{new_count} events ingérés · {cov['measured']}/{cov['total']} mesurés"
+    if cov["uncovered"]:
+        line += (
+            f" · {cov['uncovered']} non couverts "
+            "(inférence locale ou fournisseurs tiers non modélisés — conservés, impact non estimé)"
+        )
+    return line
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="agent-carbon")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -45,7 +55,7 @@ def main(argv: list[str] | None = None) -> int:
         store = _store(args.db)
         events = ClaudeCodeCollector(args.source).collect()
         n = store.ingest(events, _engine(config), config)
-        print(f"{n} events ingérés")
+        print(_ingest_summary(n, store.coverage()))
         return 0
 
     if args.cmd == "report":
