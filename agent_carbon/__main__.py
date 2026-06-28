@@ -49,16 +49,25 @@ def _cmd_models(args) -> int:
     if not sys.stdin.isatty():
         return 0
     config = Config.load()
+    accepted = []  # Collect (provider, model) to clear AFTER save
     for row in pending:
         ans = input(f"Params totaux pour {row['model']} "
                     "(ex. 7e9, vide = ignorer) : ").strip()
         if not ans:
             continue
-        total = float(ans)
+        try:
+            total = float(ans)
+        except ValueError:
+            print("Format invalide, ignoré.")
+            continue
         config.model_params[f"{row['provider']}/{row['model']}"] = {
             "active": total, "total": total, "arch": "dense", "source": "user"}
-        store.clear_pending(row["provider"], row["model"])
+        accepted.append((row["provider"], row["model"]))
+    # Save config durably BEFORE clearing any pending models
     config.save()
+    # Now clear the accepted models from pending
+    for provider, model in accepted:
+        store.clear_pending(provider, model)
     print("Paramètres enregistrés. Relancez `agent-carbon ingest`.")
     return 0
 
