@@ -21,7 +21,7 @@ Toutes les évolutions notables du projet. Format inspiré de [Keep a Changelog]
 - **Statusline** : ajout de l'**eau** (💧 L) à côté de l'énergie et du GWP.
 - **Statusline** : affiche désormais l'impact de la **session en cours** (lit `session_id` / `transcript_path` sur stdin, ingère le transcript courant, filtre par session) ; fallback total global en lancement manuel.
 - **Rapport CLI** : refonte en **graphe à barres** trié par GWP (critère phare) avec part en % — on saisit les proportions d'un coup ; longue traîne regroupée en « autres (N) » ; noms de modèles raccourcis ; **échelle d'unité automatique** (ex. `4e-05 kgSbeq` → `40 mgSbeq`) ; résumé multi-critères (5 icônes) sous le graphe. Sans dépendance (rendu fait main, largeurs fixes).
-- **Rapport CLI** : par défaut, **valeur centrale** marquée `~` (ex. `~7.5 kgCO2eq`) — plus lisible qu'une plage ; les fourchettes min–max restent disponibles via **`--detail`**.
+- **Rapport CLI** : **valeur centrale** marquée `~` (ex. `~7.5 kgCO2eq`) plus lisible qu'une plage, avec la **plage min–max affichée dans la même section** (« Impact total ») — pas de rapport ni de flag séparé.
 
 ### Notes
 

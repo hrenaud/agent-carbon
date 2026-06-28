@@ -63,8 +63,6 @@ def main(argv: list[str] | None = None) -> int:
     p_rep.add_argument("--db", default=_DEFAULT_DB)
     p_rep.add_argument("--by", choices=["model", "project", "total"], default="model")
     p_rep.add_argument("--since", default=None)
-    p_rep.add_argument("--detail", action="store_true",
-                       help="affiche les fourchettes min–max au lieu de la valeur centrale")
 
     p_st = sub.add_parser("statusline", help="ligne compacte pour la statusline")
     p_st.add_argument("--db", default=_DEFAULT_DB)
@@ -81,7 +79,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "report":
         store = _store(args.db)
-        print(render_report(store.rows_for_report(args.since), group_by=args.by, detail=args.detail))
+        print(render_report(store.rows_for_report(args.since), group_by=args.by))
         return 0
 
     if args.cmd == "statusline":

@@ -33,8 +33,8 @@ Variables optionnelles : `AGENT_CARBON_DIR`, `AGENT_CARBON_DB`, `AGENT_CARBON_RE
 # Parser les transcripts et remplir la base de données
 agent-carbon ingest [--source ~/.claude/projects] [--db ~/.agent-carbon/carbon.db]
 
-# Afficher le rapport multi-critères (valeur centrale par défaut, --detail pour les plages)
-agent-carbon report [--db ~/.agent-carbon/carbon.db] [--by model|project|total] [--since ISO8601] [--detail]
+# Afficher le rapport multi-critères (valeur centrale ~ + plage min–max dans la même section)
+agent-carbon report [--db ~/.agent-carbon/carbon.db] [--by model|project|total] [--since ISO8601]
 
 # Afficher une ligne compacte pour la statusline
 agent-carbon statusline [--db ~/.agent-carbon/carbon.db]

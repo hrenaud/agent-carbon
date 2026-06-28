@@ -13,18 +13,11 @@ ROWS = [
 ]
 
 
-def test_default_shows_central_value_not_range():
+def test_report_shows_central_and_range_in_one_section():
     out = render_report(ROWS, group_by="total")
-    # GWP total 1.5–3.0 → valeur centrale ~2.25, marquée approximative
+    # GWP total 1.5–3.0 → valeur centrale ~2.25 ET la plage 1.5–3 dans la même section
     assert "~2.25" in out
-    assert "1.5–3" not in out
-
-
-def test_detail_shows_ranges():
-    out = render_report(ROWS, group_by="total", detail=True)
-    # en mode détaillé, la fourchette sommée apparaît
     assert "1.5–3" in out
-    assert "~2.25" not in out
 
 
 def test_group_by_model_lists_each_model():
@@ -82,8 +75,8 @@ def test_tiny_values_scaled_to_readable_units():
              "adpe_min": 4.0e-5, "adpe_max": 4.16e-5,
              "pe_min": 192.0, "pe_max": 335.0,
              "wcf_min": 61.0, "wcf_max": 135.0}]
-    # détaillé : la plage ADPe doit être en mg, pas en 4e-05
-    out = render_report(rows, group_by="total", detail=True)
+    out = render_report(rows, group_by="total")
+    # la plage ADPe doit être en mg, pas en 4e-05
     assert "mgSbeq" in out
     assert "4e-05" not in out
     assert "40" in out and "41.6" in out
