@@ -15,7 +15,7 @@ _UNIT_LADDERS = {
 }
 _ICON = {"energy": "⚡", "gwp": "🌍", "wcf": "💧", "adpe": "⛏", "pe": "🔥"}
 _NAME = {"energy": "Énergie", "gwp": "GWP", "wcf": "Eau", "adpe": "ADPe", "pe": "PE"}
-_SUMMARY_ORDER = ("energy", "gwp", "wcf", "adpe", "pe")
+_SUMMARY_ORDER = ("gwp", "wcf", "adpe", "energy", "pe")
 _BAR_WIDTH = 20
 _TOP_N = 5
 
@@ -151,9 +151,9 @@ def render_intensity(rows: list[dict]) -> str:
             f"  {d['name'].ljust(name_w)}  {bar}  {_kilo(d['tph']).rjust(tph_w)} tok/h  "
             f"🌍 ~{d['perh']['gwp'] * gfac:.3g} {gunit}/h"
         )
-        # ligne 2 : les 4 autres critères /h
+        # ligne 2 : les 4 autres critères /h (GWP en tête de ligne 1)
         others = []
-        for c in ("energy", "wcf", "adpe", "pe"):
+        for c in ("wcf", "adpe", "energy", "pe"):
             f, u = _scale(d["perh"][c], c)
             others.append(f"{_ICON[c]} ~{d['perh'][c] * f:.3g} {u}/h")
         out.append(" " * (name_w + 4) + "  ".join(others))

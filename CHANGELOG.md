@@ -20,6 +20,7 @@ Toutes les évolutions notables du projet. Format inspiré de [Keep a Changelog]
 
 ### Modifié
 
+- **Ordre des indicateurs** uniformisé partout (rapport, intensité, statusline) : **GWP → Eau → ADPe → Énergie → PE**. Unité GWP cohérente (`kgCO2eq`, la statusline affichait `kgCO2e`).
 - **Statusline** : ajout de l'**eau** (💧 L) à côté de l'énergie et du GWP.
 - **Statusline** : affiche désormais l'impact de la **session en cours** (lit `session_id` / `transcript_path` sur stdin, ingère le transcript courant, filtre par session) ; fallback total global en lancement manuel.
 - **Rapport CLI** : recentré sur deux sections utiles — **Impact total** (5 critères, valeur centrale + plage) et **Intensité par modèle**. Le classement absolu par modèle/projet (`--by`) a été **retiré** : il était tautologique (plus on travaille, plus on émet) et n'apportait pas d'insight. **Échelle d'unité automatique** conservée (ex. `4e-05 kgSbeq` → `40 mgSbeq`).

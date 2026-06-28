@@ -27,6 +27,13 @@ def test_report_lists_five_criteria_with_icons():
     assert "Impact total" in out
 
 
+def test_report_criteria_in_requested_order():
+    out = render_report(ROWS)
+    # ordre demandé : GWP, Eau (wcf), ADPe, Énergie, PE
+    order = [out.index(lbl) for lbl in ("GWP", "Eau", "ADPe", "Énergie", "PE")]
+    assert order == sorted(order)
+
+
 def test_tiny_values_scaled_to_readable_units():
     rows = [{"model": "m", "project": "p",
              "energy_min": 19.0, "energy_max": 33.0,
