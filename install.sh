@@ -75,7 +75,7 @@ esac
 # 5. Câblage Claude Code (statusline + hook d'ingestion) ---------------------
 if [ "${AGENT_CARBON_NO_CLAUDE:-0}" != "1" ]; then
   mkdir -p "$(dirname "$SETTINGS_FILE")"
-  STATUSLINE_CMD="$AC_BIN statusline --db $DB_PATH"
+  STATUSLINE_CMD="$INSTALL_DIR/scripts/statusline.sh $DB_PATH"
   INGEST_CMD="$AC_BIN ingest --db $DB_PATH"
   "$INSTALL_DIR/.venv/bin/python" - "$SETTINGS_FILE" "$STATUSLINE_CMD" "$INGEST_CMD" <<'PY'
 import json, sys
