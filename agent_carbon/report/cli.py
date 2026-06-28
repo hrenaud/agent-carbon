@@ -42,17 +42,21 @@ def _scale(hi: float, criterion: str) -> tuple[float, str]:
     return chosen
 
 
-def _fmt(lo: float, hi: float, factor: float) -> str:
+def _fmt(lo: float, hi: float, factor: float, detail: bool = False) -> str:
     if hi * factor < 0.005:  # négligeable → évite un long « 0.000x » illisible
         return "≈0"
-    return f"{lo * factor:.3g}–{hi * factor:.3g}"
+    if detail:  # vue détaillée : la fourchette honnête min–max
+        return f"{lo * factor:.3g}–{hi * factor:.3g}"
+    # vue par défaut : valeur centrale, marquée « ~ » (≈, pas de fausse précision)
+    return f"~{(lo + hi) / 2 * factor:.3g}"
 
 
 def _mid(pair: list[float]) -> float:
     return (pair[0] + pair[1]) / 2
 
 
-def _bar_chart(groups: dict, totals: dict, group_by: str, unit: tuple[float, str]) -> list[str]:
+def _bar_chart(groups: dict, totals: dict, group_by: str,
+               unit: tuple[float, str], detail: bool) -> list[str]:
     """Graphe à barres trié par GWP (critère phare) : part de chaque groupe."""
     factor, unit_label = unit
     total_mid = _mid(totals["gwp"]) or 1.0
@@ -73,20 +77,21 @@ def _bar_chart(groups: dict, totals: dict, group_by: str, unit: tuple[float, str
         for name, vals in ranked:
             data.append((_disp(name, group_by), vals["gwp"]))
 
-    ranges = [_fmt(g[0], g[1], factor) for _, g in data]
+    values = [_fmt(g[0], g[1], factor, detail) for _, g in data]
     name_w = max((len(n) for n, _ in data), default=len("TOTAL"))
-    range_w = max((len(r) for r in ranges), default=0)
+    val_w = max((len(v) for v in values), default=0)
 
-    out = [f"Impact par {noun} — trié par GWP ({unit_label}) · fourchette min–max", ""]
-    for (name, gwp), rng in zip(data, ranges):
+    legend = "fourchette min–max" if detail else "valeur centrale (~)"
+    out = [f"Impact par {noun} — trié par GWP ({unit_label}) · {legend}", ""]
+    for (name, gwp), val in zip(data, values):
         share = _mid(gwp) / total_mid
         filled = min(_BAR_WIDTH, round(share * _BAR_WIDTH))
         bar = "█" * filled + " " * (_BAR_WIDTH - filled)
-        out.append(f"  {name.ljust(name_w)}  {rng.rjust(range_w)}  {bar}  {round(share * 100):>3d}%")
+        out.append(f"  {name.ljust(name_w)}  {val.rjust(val_w)}  {bar}  {round(share * 100):>3d}%")
 
-    out.append("  " + "─" * (name_w + range_w + _BAR_WIDTH + 10))
-    total_rng = _fmt(totals["gwp"][0], totals["gwp"][1], factor)
-    out.append(f"  {'TOTAL'.ljust(name_w)}  {total_rng.rjust(range_w)}")
+    out.append("  " + "─" * (name_w + val_w + _BAR_WIDTH + 10))
+    total_val = _fmt(totals["gwp"][0], totals["gwp"][1], factor, detail)
+    out.append(f"  {'TOTAL'.ljust(name_w)}  {total_val.rjust(val_w)}")
     return out
 
 
@@ -94,7 +99,7 @@ def _disp(name: str, group_by: str) -> str:
     return _short_model(name) if group_by == "model" else name
 
 
-def render_report(rows: list[dict], group_by: str) -> str:
+def render_report(rows: list[dict], group_by: str, detail: bool = False) -> str:
     groups: dict[str, dict[str, list[float]]] = {}
     for row in rows:
         g = groups.setdefault(_key(row, group_by), {c: [0.0, 0.0] for c in CRITERIA})
@@ -112,7 +117,7 @@ def render_report(rows: list[dict], group_by: str) -> str:
 
     lines: list[str] = []
     if group_by != "total" and groups:
-        lines += _bar_chart(groups, totals, group_by, units["gwp"])
+        lines += _bar_chart(groups, totals, group_by, units["gwp"], detail)
         lines.append("")
 
     # Résumé multi-critères (discret) — les 5 critères du total, chacun avec son icône.
@@ -122,12 +127,14 @@ def render_report(rows: list[dict], group_by: str) -> str:
         factor, unit = units[c]
         lines.append(
             f"  {_ICON[c]} {_NAME[c].ljust(label_w)} : "
-            f"{_fmt(totals[c][0], totals[c][1], factor)} {unit}"
+            f"{_fmt(totals[c][0], totals[c][1], factor, detail)} {unit}"
         )
 
     lines.append("")
-    lines.append(
-        "Fourchettes min–max (incertitude irréductible : région datacenter inconnue). "
-        "Zone élec configurable (défaut USA). Impact basé sur les tokens de sortie."
-    )
+    if detail:
+        note = "Fourchettes min–max (incertitude irréductible : région datacenter inconnue)."
+    else:
+        note = ("Valeur centrale (~) ; plage min–max avec --detail. "
+                "Incertitude irréductible : région datacenter inconnue.")
+    lines.append(note + " Zone élec configurable (défaut USA). Impact basé sur les tokens de sortie.")
     return "\n".join(lines)

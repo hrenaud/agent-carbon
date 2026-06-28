@@ -18,11 +18,12 @@ AC="$(command -v agent-carbon || echo "$HOME/.agent-carbon/src/.venv/bin/agent-c
 "$AC" report --by model
 ```
 
-2. Par défaut, le rapport est **groupé par modèle**. Adapter selon la demande de l'utilisateur :
+2. Par défaut, le rapport est **groupé par modèle** et affiche une **valeur centrale** (`~`). Adapter selon la demande :
    - par projet → `"$AC" report --by project`
    - total global → `"$AC" report --by total`
    - sur une période → ajouter `--since <ISO8601>` (ex. `--since 2026-06-01T00:00:00Z`)
+   - plages min–max (vue détaillée) → ajouter `--detail`
 
-3. Présenter le tableau sans le déformer, puis rappeler en une phrase :
-   - les valeurs sont des **fourchettes min–max** (l'incertitude sur la région datacenter d'Anthropic est irréductible) ;
+3. Présenter le graphe **sans le déformer** (bloc de code monospace pour garder l'alignement), puis rappeler en une phrase :
+   - la valeur centrale est marquée `~` (approximative) ; les **fourchettes min–max** (via `--detail`) reflètent l'incertitude irréductible sur la région datacenter ;
    - les modèles **locaux ou tiers non modélisés** sont comptés mais sans impact estimé (cf. ligne « non couverts »).
