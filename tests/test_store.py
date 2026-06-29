@@ -93,6 +93,23 @@ def test_tokens_by_model_filters_by_since(tmp_path):
     assert data[0]["tokens"] == 300  # seul le 2e event (100+200)
 
 
+def test_uncovered_by_model_excludes_synthetic_sums_output(tmp_path):
+    store = SQLiteStore(str(tmp_path / "c.db"))
+    events = [
+        # placeholder interne Claude Code : à ignorer (0 token, aucune inférence)
+        InferenceEvent("anthropic", "<synthetic>", 0, 0, 0, 0,
+                       "2026-06-27T10:00:00.000Z", "p", "s", "u1"),
+        # vrai modèle tiers non modélisé (le « : » fait échouer HF sans réseau)
+        InferenceEvent("openrouter", "z-ai/glm-4.5-air:free", 100, 200, 0, 0,
+                       "2026-06-27T10:05:00.000Z", "p", "s", "u2"),
+    ]
+    store.ingest(events, _engine(), Config())
+    data = store.uncovered_by_model()
+    assert len(data) == 1  # le <synthetic> est exclu
+    assert data[0]["model"] == "z-ai/glm-4.5-air:free"
+    assert data[0]["tokens"] == 200  # tokens générés (sortie)
+
+
 def test_rows_for_report_filters_by_session(tmp_path):
     store = SQLiteStore(str(tmp_path / "c.db"))
     events = [

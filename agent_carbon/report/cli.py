@@ -205,3 +205,23 @@ def render_tokens_by_model(rows: list[dict]) -> str:
         "\n\n  « tokens » = total utilisé (entrée + sortie + cache) ; "
         "l'impact reste calculé sur les seuls tokens de sortie."
     )
+
+
+def render_uncovered(rows: list[dict]) -> str:
+    """Modèles à impact non estimé (hors `<synthetic>`) : tokens générés sur la
+    plage, triés décroissant, + invite à lancer la résolution. Vide si tout est
+    couvert. ``rows`` : ``{model, tokens, events}``."""
+    if not rows:
+        return ""
+    rows = sorted(rows, key=lambda r: r["tokens"], reverse=True)
+    toks = [_kilo(r["tokens"]) for r in rows]
+    name_w = max(len(r["model"]) for r in rows)
+    tok_w = max(len(t) for t in toks)
+
+    out = ["Modèles non couverts — tokens générés sur la plage (impact non estimé)", ""]
+    for r, t in zip(rows, toks):
+        out.append(f"  {r['model'].ljust(name_w)}  {t.rjust(tok_w)}")
+    out.append("")
+    out.append("  Paramètres inconnus d'EcoLogits → impact non estimable en l'état.")
+    out.append("  → lance `agent-carbon-resolve` pour tenter de les résoudre via Hugging Face.")
+    return "\n".join(out)

@@ -13,6 +13,7 @@ from agent_carbon.report.cli import (
     render_projects,
     render_report,
     render_tokens_by_model,
+    render_uncovered,
 )
 from agent_carbon.statusline.line import render_statusline
 from agent_carbon.store.db import SQLiteStore
@@ -145,6 +146,9 @@ def main(argv: list[str] | None = None) -> int:
         tokens = render_tokens_by_model(store.tokens_by_model(args.since))
         if tokens:
             out += "\n\n" + tokens
+        uncovered = render_uncovered(store.uncovered_by_model(args.since))
+        if uncovered:
+            out += "\n\n" + uncovered
         intensity = render_intensity(store.intensity_by_model())
         if intensity:
             out += "\n\n" + intensity

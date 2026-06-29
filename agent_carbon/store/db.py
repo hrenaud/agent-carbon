@@ -231,6 +231,24 @@ class SQLiteStore:
             })
         return out
 
+    def uncovered_by_model(self, since: str | None = None) -> list[dict]:
+        """Modèles à impact non estimé (error non NULL), hors `<synthetic>`
+        (placeholders Claude Code, 0 token) : tokens générés (sortie) et nombre
+        d'events par modèle sur la plage. Sert à proposer une résolution."""
+        sql = (
+            "SELECT e.model AS model, SUM(e.output_tokens) AS toks, COUNT(*) AS n "
+            "FROM events e JOIN impacts i "
+            "ON e.session_id=i.session_id AND e.msg_id=i.msg_id "
+            "WHERE i.error IS NOT NULL AND e.model != '<synthetic>'"
+        )
+        params: list = []
+        if since:
+            sql += " AND e.timestamp >= ?"
+            params.append(since)
+        sql += " GROUP BY e.model"
+        return [{"model": r["model"], "tokens": r["toks"] or 0, "events": r["n"]}
+                for r in self.conn.execute(sql, tuple(params))]
+
     def coverage(self) -> dict:
         """Couverture de mesure : total, mesurés (impact estimé), non couverts
         (modèle non modélisé par EcoLogits → event conservé, impact non estimé)."""
