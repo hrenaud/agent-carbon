@@ -127,34 +127,53 @@ def render_projects(rows: list[dict], show_all: bool = False) -> str:
     return "\n".join(out)
 
 
+# Colonnes du tableau d'intensité (ordre uniforme GWP → Eau → ADPe → Énergie → PE)
+# avec icône + libellé court en en-tête (icônes seulement là, pour ne pas casser
+# l'alignement des cellules : un émoji occupe 2 cellules visuelles mais 1 caractère).
+_INTENSITY_COLS = ("gwp", "wcf", "adpe", "energy", "pe")
+_COL_HEADER = {"gwp": "🌍 GWP/h", "wcf": "💧 Eau/h", "adpe": "⛏ ADPe/h",
+               "energy": "⚡ Éner./h", "pe": "🔥 PE/h"}
+_NAME_CAP = 18
+
+
+def _truncate(name: str, cap: int = _NAME_CAP) -> str:
+    return name if len(name) <= cap else name[: cap - 1] + "…"
+
+
+def _intensity_cell(value: float, criterion: str) -> str:
+    """Valeur centrale /h d'un critère, échelle d'unité choisie par cellule."""
+    factor, unit = _scale(value, criterion)
+    if value * factor < 0.005:
+        return "≈0"
+    return f"~{value * factor:.3g} {unit}"
+
+
 def render_intensity(rows: list[dict]) -> str:
-    """Intensité par modèle, par heure de travail effectif : une barre visualise
-    le débit de tokens/h, suivie des 5 critères d'émission /h."""
+    """Intensité par modèle, par heure de travail effectif, en tableau aligné :
+    une ligne par modèle (débit tokens/h + 5 critères d'émission /h)."""
     if not rows:
         return ""
-    data = [{"name": _short_model(r["model"]),
-             "tph": r["tokens"] / r["hours"],
-             "perh": {c: r[c] / r["hours"] for c in CRITERIA}} for r in rows]
-    data.sort(key=lambda d: d["tph"], reverse=True)
-    max_tph = max(d["tph"] for d in data) or 1.0
-    name_w = max(len(d["name"]) for d in data)
-    tph_w = max(len(_kilo(d["tph"])) for d in data)
+    data = []
+    for r in rows:
+        perh = {c: r[c] / r["hours"] for c in CRITERIA}
+        data.append({
+            "name": _truncate(_short_model(r["model"])),
+            "tph": _kilo(r["tokens"] / r["hours"]),
+            "sort": r["tokens"] / r["hours"],
+            "cells": {c: _intensity_cell(perh[c], c) for c in _INTENSITY_COLS},
+        })
+    data.sort(key=lambda d: d["sort"], reverse=True)
+    name_w = max(len("modèle"), max(len(d["name"]) for d in data))
+    tph_w = max(len("tok/h"), max(len(d["tph"]) for d in data))
+    col_w = {c: max(len(_COL_HEADER[c]), max(len(d["cells"][c]) for d in data))
+             for c in _INTENSITY_COLS}
 
-    out = ["Intensité par modèle — par heure de travail effectif (temps actif)", ""]
+    def _row(name: str, tph: str, cell) -> str:
+        cols = "  ".join(cell(c).ljust(col_w[c]) for c in _INTENSITY_COLS)
+        return f"  {name.ljust(name_w)}  {tph.rjust(tph_w)}  {cols}"
+
+    out = ["Intensité par modèle — par heure de travail effectif (~ central)", ""]
+    out.append(_row("modèle", "tok/h", lambda c: _COL_HEADER[c]))
     for d in data:
-        share = d["tph"] / max_tph
-        filled = min(_BAR_WIDTH, round(share * _BAR_WIDTH))
-        bar = "█" * filled + " " * (_BAR_WIDTH - filled)
-        gfac, gunit = _scale(d["perh"]["gwp"], "gwp")
-        # ligne 1 : barre (alignée, aucun émoji avant) du débit tokens/h + GWP/h
-        out.append(
-            f"  {d['name'].ljust(name_w)}  {bar}  {_kilo(d['tph']).rjust(tph_w)} tok/h  "
-            f"🌍 ~{d['perh']['gwp'] * gfac:.3g} {gunit}/h"
-        )
-        # ligne 2 : les 4 autres critères /h (GWP en tête de ligne 1)
-        others = []
-        for c in ("wcf", "adpe", "energy", "pe"):
-            f, u = _scale(d["perh"][c], c)
-            others.append(f"{_ICON[c]} ~{d['perh'][c] * f:.3g} {u}/h")
-        out.append(" " * (name_w + 4) + "  ".join(others))
+        out.append(_row(d["name"], d["tph"], lambda c, d=d: d["cells"][c]))
     return "\n".join(out)

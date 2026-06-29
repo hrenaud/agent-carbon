@@ -48,7 +48,7 @@ def test_tiny_values_scaled_to_readable_units():
     assert "40" in out and "41.6" in out
 
 
-def test_render_intensity_shows_tokens_bar_and_emissions():
+def test_render_intensity_aligned_table_one_line_per_model():
     rows = [
         {"model": "claude-opus-4-8", "hours": 1.0, "tokens": 566000,
          "energy": 5.0, "gwp": 1.07, "adpe": 5e-6, "pe": 50.0, "wcf": 9.0},
@@ -57,11 +57,29 @@ def test_render_intensity_shows_tokens_bar_and_emissions():
     ]
     out = render_intensity(rows)
     assert "tok/h" in out
-    assert "█" in out                       # barre de visualisation des tokens
+    assert "modèle" in out                  # ligne d'en-tête du tableau
     for icon in ("🌍", "⚡", "💧", "⛏", "🔥"):
         assert icon in out
+    # une seule ligne par modèle : nom + tok/h + GWP sur la même ligne
+    opus_line = next(l for l in out.splitlines() if "opus-4-8" in l)
+    assert "tok/h" not in opus_line          # « tok/h » n'est que dans l'en-tête
+    assert "kgCO2eq" in opus_line and "~566k" in opus_line
     # trié par tok/h décroissant : opus (566k) avant haiku (276k)
     assert out.index("opus-4-8") < out.index("haiku-4-5")
+
+
+def test_render_intensity_fixed_unit_per_cell_is_readable():
+    # GWP opus ~1.07 kg vs haiku ~0.014 kg → unités lisibles par cellule
+    rows = [
+        {"model": "claude-opus-4-8", "hours": 1.0, "tokens": 566000,
+         "energy": 5.0, "gwp": 1.07, "adpe": 5e-6, "pe": 50.0, "wcf": 9.0},
+        {"model": "claude-haiku-4-5", "hours": 1.0, "tokens": 276000,
+         "energy": 1.0, "gwp": 0.014, "adpe": 1e-6, "pe": 10.0, "wcf": 2.0},
+    ]
+    out = render_intensity(rows)
+    haiku_line = next(l for l in out.splitlines() if "haiku-4-5" in l)
+    assert "gCO2eq" in haiku_line            # 0.014 kg → 14 gCO2eq, pas « 0.014 »
+    assert "0.014" not in haiku_line
 
 
 def test_render_intensity_empty():

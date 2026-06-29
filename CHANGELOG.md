@@ -30,6 +30,7 @@ Toutes les évolutions notables du projet. Format inspiré de [Keep a Changelog]
 - **Statusline** : affiche désormais l'impact de la **session en cours** (lit `session_id` / `transcript_path` sur stdin, ingère le transcript courant, filtre par session) ; fallback total global en lancement manuel.
 - **Rapport CLI** : recentré sur deux sections utiles — **Impact total** (5 critères, valeur centrale + plage) et **Intensité par modèle**. Le classement absolu par modèle/projet (`--by`) a été **retiré** : il était tautologique (plus on travaille, plus on émet) et n'apportait pas d'insight. **Échelle d'unité automatique** conservée (ex. `4e-05 kgSbeq` → `40 mgSbeq`).
 - **Rapport CLI** : **valeur centrale** marquée `~` (ex. `~7.5 kgCO2eq`) plus lisible qu'une plage, avec la **plage min–max affichée dans la même section** (« Impact total ») — pas de rapport ni de flag séparé.
+- **Intensité par modèle** : refonte en **tableau aligné** (une ligne par modèle, colonnes alignées, icônes en en-tête, noms longs tronqués). Remplace l'ancien rendu sur deux lignes aux unités auto-échelonnées par cellule et colonnes flottantes, peu lisible. La barre de débit tokens/h cède la place à la valeur tok/h ; unité d'émission lisible choisie par cellule.
 
 ### Notes
 
