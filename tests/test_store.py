@@ -115,6 +115,21 @@ def test_tokens_by_model_filters_by_since(tmp_path):
     assert data[0]["tokens"] == 300  # seul le 2e event (100+200)
 
 
+def test_tokens_by_model_since_accepts_date_only(tmp_path):
+    # une date seule « YYYY-MM-DD » filtre correctement les timestamps « …T…Z »
+    store = SQLiteStore(str(tmp_path / "c.db"))
+    events = [
+        InferenceEvent("anthropic", "claude-opus-4-8", 100, 200, 0, 0,
+                       "2026-06-27T23:59:00.000Z", "p", "s", "u1"),
+        InferenceEvent("anthropic", "claude-opus-4-8", 100, 200, 0, 0,
+                       "2026-06-28T00:00:01.000Z", "p", "s", "u2"),
+    ]
+    store.ingest(events, _engine(), Config())
+    data = store.tokens_by_model(since="2026-06-28")
+    assert len(data) == 1
+    assert data[0]["tokens"] == 300  # seul l'event du 28 (100+200)
+
+
 def test_uncovered_by_model_excludes_synthetic_sums_output(tmp_path):
     store = SQLiteStore(str(tmp_path / "c.db"))
     events = [

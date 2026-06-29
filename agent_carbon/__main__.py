@@ -6,6 +6,7 @@ import sys
 from agent_carbon.collectors.claude_code import ClaudeCodeCollector
 from agent_carbon.config import Config, DEFAULT_CONFIG_PATH
 from agent_carbon.config_detect import detect_zone, system_locale
+from agent_carbon.dates import parse_since
 from agent_carbon.impact.engine import EcoLogitsEngine
 from agent_carbon.impact.resolver import ModelResolver
 from agent_carbon.report.cli import (
@@ -116,7 +117,8 @@ def main(argv: list[str] | None = None) -> int:
 
     p_rep = sub.add_parser("report", help="afficher le rapport multi-critères")
     p_rep.add_argument("--db", default=_DEFAULT_DB)
-    p_rep.add_argument("--since", default=None)
+    p_rep.add_argument("--since", default=None, type=parse_since,
+                       help="date de début (ex. 2026-06-27, 27/06/2026, 27/06/26)")
     p_rep.add_argument("--all-projects", action="store_true",
                        help="lister tous les projets (sinon top 5 + « autres »)")
     p_rep.add_argument("--detail", "--detailed", dest="detail", action="store_true",
@@ -131,7 +133,8 @@ def main(argv: list[str] | None = None) -> int:
     p_res = sub.add_parser("resolve",
                            help="résoudre les modèles non couverts (params HF) et recalculer")
     p_res.add_argument("--db", default=_DEFAULT_DB)
-    p_res.add_argument("--since", default=None)
+    p_res.add_argument("--since", default=None, type=parse_since,
+                       help="date de début (ex. 2026-06-27, 27/06/2026, 27/06/26)")
     p_res.add_argument("--list", action="store_true")
     p_res.add_argument("--json", action="store_true")
     p_res.add_argument("--set", action="append", default=[], metavar="P/M=REPO")

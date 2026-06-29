@@ -23,7 +23,7 @@ AC="$(command -v agent-carbon || echo "$HOME/.agent-carbon/src/.venv/bin/agent-c
 
 **Flags de `report` (les seuls valides — ne pas en inventer ni en remapper) :**
 
-- `--since <ISO8601>` : limiter à une période (ex. `--since 2026-06-01T00:00:00Z`).
+- `--since <date>` : limiter à une période. Date simple acceptée (ex. `--since 2026-06-01`, `--since 01/06/2026`, `--since 01/06/26`), sans heure ni fuseau ; un ISO 8601 complet reste accepté.
 - `--all-projects` : lister tous les projets (sinon top 5 + « autres »).
 - `--detail` (alias `--detailed`) : afficher les **fourchettes min–max** par modèle/projet au lieu de la valeur centrale `~`. **`--detail` ≠ `--all-projects`** : ne pas confondre.
 

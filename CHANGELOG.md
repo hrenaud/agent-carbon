@@ -4,6 +4,10 @@ Toutes les évolutions notables du projet. Format inspiré de [Keep a Changelog]
 
 ## [Non publié]
 
+### Modifié
+
+- **`--since` accepte une date simple** : `report`/`resolve` acceptent désormais `--since 2026-06-27`, `--since 27/06/2026` ou `--since 27/06/26` (sans heure ni fuseau), normalisées en `YYYY-MM-DD` ; l'ISO 8601 complet reste accepté. Format invalide → erreur claire.
+
 ### Corrigé
 
 - **Restauration du flag `report --detail`** (régressé lors de la fusion centrale+min–max dans la seule section « Impact total ») : `--detail` (alias `--detailed`) affiche de nouveau les **fourchettes min–max** dans les tableaux par modèle/projet (« Projets », « Tokens & impact par modèle », « Intensité ») au lieu de la valeur centrale `~`. Le store expose désormais les bornes min/max par critère ; vue compacte (`~`) par défaut.

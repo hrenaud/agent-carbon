@@ -38,7 +38,8 @@ agent-carbon ingest [--source ~/.claude/projects] [--db ~/.agent-carbon/carbon.d
 # (tokens totaux utilisés sur la plage + impact des 5 critères), « Modèles non couverts »
 # (tokens générés par les modèles à impact non estimé + invite à agent-carbon-resolve)
 # puis « Intensité par modèle » (tokens/h et émissions/h par heure de travail effectif).
-agent-carbon report [--db ~/.agent-carbon/carbon.db] [--since ISO8601] [--all-projects] [--detail]
+agent-carbon report [--db ~/.agent-carbon/carbon.db] [--since DATE] [--all-projects] [--detail]
+# --since accepte une date simple : 2026-06-27, 27/06/2026, 27/06/26 (ou un ISO 8601 complet)
 # --detail (alias --detailed) : fourchettes min–max par modèle/projet au lieu de la centrale ~
 
 # Afficher une ligne compacte pour la statusline
@@ -59,8 +60,8 @@ agent-carbon ingest
 # Rapport (total + intensité par modèle)
 agent-carbon report
 
-# Rapport depuis hier
-agent-carbon report --since 2026-06-26T00:00:00Z
+# Rapport depuis une date (date simple, sans heure ni fuseau)
+agent-carbon report --since 2026-06-26
 
 # Lister tous les projets (sinon top 5 + « autres »)
 agent-carbon report --all-projects
