@@ -30,17 +30,24 @@ lecture seule, déclare les params en milliards dans un `Config` en mémoire, et
 recalcule via `EcoLogitsEngine`. Logique : pour chaque event → `engine.compute()`,
 on somme `rec.totals[crit]` (min/max). Référence cloud = `claude-opus-4-8` (tier 1).
 
-## Suite 1 — Recalculer les impacts en base
+## Suite 1 — Recalculer les impacts en base — ✅ FAIT (2026-06-29)
 
-**Problème** : les events Qwen déjà en base ont un impact « non couvert »
+**Problème** : les events Qwen déjà en base avaient un impact « non couvert »
 (`error` non nul) calculé par l'**ancien** moteur. L'ingestion étant idempotente
-par `msg_id`, relancer `agent-carbon ingest` ne les recalcule pas.
+par `msg_id`, relancer `agent-carbon ingest` ne les recalculait pas.
 
-**À faire** : un recompute ciblé qui, pour les modèles auto-hébergés désormais
-résolubles (déclarés dans `config.model_params`), réexécute `engine.compute()` et
-fait `INSERT OR REPLACE` dans la table `impacts` (cf. `SQLiteStore._store_impact`,
-`agent_carbon/store/db.py`). À décider : commande dédiée (`agent-carbon recompute
---model ...`) vs script ponctuel. Mettre à jour aussi `coverage()` / le rapport.
+**Décision** : on est en phase de dev, personne d'autre n'utilise l'outil → pas
+de surface CLA exposée. **Script jetable** (scratchpad, `recompute.py`) plutôt
+qu'une commande `recompute`. À recréer si besoin : il déclare les params réels en
+milliards (couples MoE) dans `config.json`, sélectionne les events dont
+`impacts.error IS NOT NULL`, reconstruit l'`InferenceEvent` depuis la ligne,
+rappelle `engine.compute()` et fait `INSERT OR REPLACE` via `_store_impact`.
+`coverage()`/rapport se mettent à jour seuls (ils lisent la table `impacts`).
+
+**Résultat terrain** : non couverts **8360 → 82** (8278 résolus ; les 82 restants =
+`<synthetic>` à 0 token + modèles externes `:free` écartés). Intensité
+Qwen3.6-35B-A3B confirmée ≈ **12,4 gCO₂eq/M tokens**. Params persistés dans
+`config.json` (milliards + `arch=moe`) → futurs `ingest` résolus aussi.
 
 ## Suite 2 — Gérer le couple actif/total MoE dans `agent-carbon models`
 

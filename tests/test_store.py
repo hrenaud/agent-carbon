@@ -76,6 +76,30 @@ def test_rows_for_report_filters_by_session(tmp_path):
     assert only_a[0]["project"] == "projA"
 
 
+def test_client_persisted_and_in_report(tmp_path):
+    store = SQLiteStore(str(tmp_path / "c.db"))
+    events = [
+        InferenceEvent("anthropic", "claude-opus-4-8", 100, 200, 0, 0,
+                       "2026-06-27T10:00:00.000Z", "projA", "sess-A", "u1",
+                       client="claude-code"),
+    ]
+    store.ingest(events, _engine(), Config())
+    assert store.rows_for_report()[0]["client"] == "claude-code"
+
+
+def test_client_backfilled_on_reingest(tmp_path):
+    store = SQLiteStore(str(tmp_path / "c.db"))
+    # 1re ingestion sans client (event historique)
+    e = InferenceEvent("anthropic", "claude-opus-4-8", 100, 200, 0, 0,
+                       "2026-06-27T10:00:00.000Z", "projA", "sess-A", "u1")
+    store.ingest([e], _engine(), Config())
+    assert store.rows_for_report()[0]["client"] == ""
+    # ré-ingestion du même event avec client → backfill
+    import dataclasses
+    store.ingest([dataclasses.replace(e, client="claude-code")], _engine(), Config())
+    assert store.rows_for_report()[0]["client"] == "claude-code"
+
+
 def test_impact_columns_persisted(tmp_path):
     store = SQLiteStore(str(tmp_path / "c.db"))
     store.ingest(_events(), _engine(), Config())

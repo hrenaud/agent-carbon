@@ -22,6 +22,7 @@ def test_event_fields_mapped_from_real_structure():
     assert e.cache_creation_tokens == 7052
     assert e.project == "projA"          # basename de cwd
     assert e.session_id == "sess-A"
+    assert e.client == "claude-code"     # outil client à l'origine de l'event
 
 
 def test_active_seconds_from_timestamp_delta():

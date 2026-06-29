@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS events (
   cache_creation_tokens INTEGER, cache_read_tokens INTEGER,
   timestamp TEXT, project TEXT,
   active_seconds REAL DEFAULT 0,
+  client TEXT DEFAULT '',
   PRIMARY KEY (session_id, msg_id)
 );
 CREATE TABLE IF NOT EXISTS impacts (
@@ -47,11 +48,15 @@ class SQLiteStore:
         self.conn = sqlite3.connect(path)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(_SCHEMA)
-        # Migration : colonne active_seconds sur une DB pré-existante.
-        try:
-            self.conn.execute("ALTER TABLE events ADD COLUMN active_seconds REAL DEFAULT 0")
-        except sqlite3.OperationalError:
-            pass  # colonne déjà présente
+        # Migrations : colonnes ajoutées après coup sur une DB pré-existante.
+        for ddl in (
+            "ALTER TABLE events ADD COLUMN active_seconds REAL DEFAULT 0",
+            "ALTER TABLE events ADD COLUMN client TEXT DEFAULT ''",
+        ):
+            try:
+                self.conn.execute(ddl)
+            except sqlite3.OperationalError:
+                pass  # colonne déjà présente
         self.conn.commit()
 
     def import_legacy(self, carbon_db_path: str):
@@ -62,19 +67,24 @@ class SQLiteStore:
         new_count = 0
         for e in events:
             cur = self.conn.execute(
-                "INSERT OR IGNORE INTO events VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT OR IGNORE INTO events VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                 (e.session_id, e.msg_id, e.provider, e.model,
                  e.input_tokens, e.output_tokens,
                  e.cache_creation_tokens, e.cache_read_tokens,
-                 e.timestamp, e.project, e.active_seconds),
+                 e.timestamp, e.project, e.active_seconds, e.client),
             )
             if cur.rowcount == 0:
-                # déjà ingéré → idempotent ; on backfille juste active_seconds
-                # (colonne ajoutée après coup) sans recalculer l'impact.
+                # déjà ingéré → idempotent ; on backfille juste les colonnes
+                # ajoutées après coup (active_seconds, client) sans recalculer l'impact.
                 self.conn.execute(
                     "UPDATE events SET active_seconds=? "
                     "WHERE session_id=? AND msg_id=? AND active_seconds=0",
                     (e.active_seconds, e.session_id, e.msg_id),
+                )
+                self.conn.execute(
+                    "UPDATE events SET client=? "
+                    "WHERE session_id=? AND msg_id=? AND client=''",
+                    (e.client, e.session_id, e.msg_id),
                 )
                 continue
             new_count += 1
@@ -139,7 +149,7 @@ class SQLiteStore:
     def rows_for_report(self, since: str | None = None,
                         session_id: str | None = None) -> list[dict]:
         sql = (
-            "SELECT e.model, e.project, e.timestamp, "
+            "SELECT e.model, e.project, e.timestamp, e.client, "
             "i.energy_min, i.energy_max, i.gwp_min, i.gwp_max, "
             "i.adpe_min, i.adpe_max, i.pe_min, i.pe_max, i.wcf_min, i.wcf_max "
             "FROM events e JOIN impacts i "

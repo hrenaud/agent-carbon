@@ -21,6 +21,7 @@ Toutes les évolutions notables du projet. Format inspiré de [Keep a Changelog]
 - **Config persistée** (`~/.agent-carbon/config.json`) : zone du mix (détectée à la 1re utilisation), PUE/WUE en plage.
 - Sous-commande `agent-carbon models` pour renseigner les modèles non résolus.
 - Skill `agent-carbon-config` pour régler mix et PUE/WUE.
+- **Dimension `client`** : l'outil à l'origine de chaque event (`claude-code`, `opencode`…) est désormais stocké. Nouvelle colonne `events.client` (renseignée par le collector, rétro-remplie à la ré-ingestion), exposée dans `rows_for_report`. Prépare la ventilation de l'impact par client agentique.
 
 ### Modifié
 

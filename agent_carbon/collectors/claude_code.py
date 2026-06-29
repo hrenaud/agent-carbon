@@ -32,6 +32,7 @@ def _active_seconds(prev: datetime | None, cur: datetime | None) -> float:
 
 class ClaudeCodeCollector(Collector):
     provider = "anthropic"
+    client = "claude-code"
 
     def __init__(self, root: str):
         self.root = os.path.expanduser(root)
@@ -74,6 +75,7 @@ class ClaudeCodeCollector(Collector):
                             session_id=obj.get("sessionId", ""),
                             msg_id=obj.get("uuid", ""),
                             active_seconds=_active_seconds(prev_ts, cur_ts),
+                            client=self.client,
                         )
                 if cur_ts is not None:
                     prev_ts = cur_ts
