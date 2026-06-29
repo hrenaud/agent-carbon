@@ -73,17 +73,22 @@ agent-carbon statusline
 ### Couverture (ce que dit la sortie d'`ingest`)
 
 ```
-22 events ingérés · 23626/31981 mesurés · 8355 non couverts (inférence locale ou fournisseurs tiers non modélisés — conservés, impact non estimé)
+80 events ingérés · 33639/33709 mesurés · 70 non couverts (inférence locale ou fournisseurs tiers non modélisés — conservés, impact non estimé)
 ```
 
 - **mesurés** : impact estimé par EcoLogits.
-- **non couverts** : modèle hors périmètre EcoLogits (inférence locale, fournisseurs tiers) — l'event est **conservé** mais son impact n'est **pas** estimé (afficher faux serait pire). Ces lignes sont exclues des totaux du rapport.
+- **non couverts** : modèle hors périmètre EcoLogits (inférence locale, fournisseurs tiers) — l'event est **conservé** mais son impact n'est **pas** estimé (afficher faux serait pire). Ces lignes sont exclues des totaux du rapport. Beaucoup sont des placeholders internes `<synthetic>` (0 token, aucune inférence). Les vrais modèles tiers/auto-hébergés peuvent être résolus vers un repo Hugging Face via `agent-carbon resolve` (ou le skill `/agent-carbon-resolve`).
 
 Les warnings bruts d'EcoLogits sont volontairement silencés pendant l'ingestion (l'information reste stockée par record) pour ne pas faire croire à un plantage.
 
-## Skill Claude Code
+## Skills Claude Code
 
-Le projet fournit le skill **`/agent-carbon-report`** (dans `skills/`). L'installeur le déploie par symlink dans `~/.claude/skills/`. Après redémarrage de Claude Code, taper `/agent-carbon-report` (ou demander « mon impact / mon empreinte ») lance le rapport multi-critères.
+Le projet fournit plusieurs skills (dans `skills/`), déployés par symlink dans `~/.claude/skills/` par l'installeur :
+
+- **`/agent-carbon-report`** — rapport multi-critères (ou demander « mon impact / mon empreinte »).
+- **`/agent-carbon-resolve`** — résout les modèles non couverts (mapping nom→repo Hugging Face + recompute).
+- **`/agent-carbon-config`** — règle la zone du mix électrique et PUE/WUE.
+- **`/agent-carbon-help`** — aide : commandes et options, à partir du `--help` réel de la CLI.
 
 ## Statusline dans Claude Code
 

@@ -15,6 +15,7 @@ Toutes les évolutions notables du projet. Format inspiré de [Keep a Changelog]
 
 ### Ajouté
 
+- **Skill `/agent-carbon-help` + rappel `--help` en pied de rapport** : chaque rapport se termine par un rappel des options (`--since`, `--detail`, `--all-projects`) renvoyant vers `agent-carbon report --help` et le skill `/agent-carbon-help`, qui restitue l'aide réelle de la CLI (toutes commandes) sans rien inventer.
 - **MVP** : compteur d'impact multi-critères (énergie, GWP, eau, ADPe, PE) avec fourchettes min–max, pour les sessions Claude Code.
   - Collecte des transcripts JSONL (`ClaudeCodeCollector`), confidentialité par conception (aucun contenu stocké).
   - Calcul d'impact **offline** délégué à EcoLogits (`mlco2/ecologits@0.11.0`), piloté par les tokens de sortie.
