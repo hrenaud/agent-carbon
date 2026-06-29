@@ -88,3 +88,44 @@ def test_resolve_forget_reverts(tmp_path, monkeypatch):
     assert rc == 0
     assert SQLiteStore(db).coverage()["uncovered"] == 1
     assert "ollama/x:y" not in Config.load(config_path).model_params
+
+
+def test_resolve_forget_only_affects_target_model(tmp_path, monkeypatch):
+    """Teste que --forget n'affecte que le modèle oublié, même quand deux
+    modèles coexistent et partagent des (session_id, msg_id) de manière croisée."""
+    db = str(tmp_path / "c.db")
+    config_path = str(tmp_path / "config.json")
+    Config(electricity_mix_zone="FRA").save(config_path)
+    _patch_config(monkeypatch, config_path)
+
+    # Ingère deux modèles non couverts
+    store = SQLiteStore(db)
+    store.ingest([
+        InferenceEvent("ollama", "ModelA", 100, 200, 0, 0,
+                       "2026-06-27T10:00:00.000Z", "p", "s1", "mA1"),
+        InferenceEvent("ollama", "ModelA", 100, 200, 0, 0,
+                       "2026-06-27T10:01:00.000Z", "p", "s2", "mA2"),
+        InferenceEvent("ollama", "ModelB", 100, 200, 0, 0,
+                       "2026-06-27T10:02:00.000Z", "p", "s1", "mA2"),
+    ], _engine(), Config(electricity_mix_zone="FRA"))
+    assert store.coverage()["uncovered"] == 3  # tous en erreur
+
+    # Mock HF pour le --set
+    _fake_hf(7_000_000_000, monkeypatch)
+
+    # Set params pour A et B → tous couverts
+    with redirect_stdout(io.StringIO()):
+        cli.main(["resolve", "--db", db, "--set", "ollama/ModelA=Org/RepoA"])
+    with redirect_stdout(io.StringIO()):
+        cli.main(["resolve", "--db", db, "--set", "ollama/ModelB=Org/RepoB"])
+    assert SQLiteStore(db).coverage()["uncovered"] == 0
+
+    # Forget ModelA, mais HF est now unavailable pour recompute
+    monkeypatch.setitem(sys.modules, "huggingface_hub", None)
+    with redirect_stdout(io.StringIO()):
+        cli.main(["resolve", "--db", db, "--forget", "ollama/ModelA"])
+
+    # Vérification : ModelA uncovered, ModelB covered
+    store = SQLiteStore(db)
+    uncovered_models = {r["model"] for r in store.uncovered_by_model()}
+    assert uncovered_models == {"ModelA"}, f"Expected only ModelA uncovered, got {uncovered_models}"

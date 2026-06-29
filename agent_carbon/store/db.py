@@ -249,6 +249,15 @@ class SQLiteStore:
         return [{"model": r["model"], "tokens": r["toks"] or 0, "events": r["n"]}
                 for r in self.conn.execute(sql, tuple(params))]
 
+    def mark_model_events_error(self, provider: str, model: str, error: str) -> None:
+        """Marque en erreur les impacts des events d'un (provider, model) donné,
+        pour qu'un recompute les reprenne (ex. après l'oubli d'un mapping)."""
+        self.conn.execute(
+            "UPDATE impacts SET error = ? WHERE (session_id, msg_id) IN ("
+            "SELECT session_id, msg_id FROM events WHERE provider = ? AND model = ?)",
+            (error, provider, model))
+        self.conn.commit()
+
     def recompute_errors(self, engine: EcoLogitsEngine, config: Config) -> dict:
         """Recalcule l'impact de tous les events en erreur (utile après ajout de
         params). Retourne {before, after} = nombre de non couverts avant/après."""

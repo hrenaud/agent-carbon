@@ -92,15 +92,7 @@ def cmd_resolve(args) -> int:
     # Mark events referencing forgotten models as errors, so they'll be recomputed
     for model_key in forgotten_models:
         provider, model = model_key.split("/", 1)
-        store.conn.execute(
-            "UPDATE impacts SET error = 'model-params-reset' "
-            "WHERE session_id IN ("
-            "  SELECT session_id FROM events WHERE provider = ? AND model = ?"
-            ") AND msg_id IN ("
-            "  SELECT msg_id FROM events WHERE provider = ? AND model = ?"
-            ")",
-            (provider, model, provider, model))
-        store.conn.commit()
+        store.mark_model_events_error(provider, model, "model-params-reset")
     if args.recompute or changed:
         engine = EcoLogitsEngine(ModelResolver(config.model_aliases))
         _print_recompute(store.recompute_errors(engine, config))

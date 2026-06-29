@@ -176,3 +176,24 @@ def test_recompute_errors_resolves_after_params_added(tmp_path):
     assert delta == {"before": 2, "after": 1}   # x:y résolu, <synthetic> reste
     covered = [r for r in store.rows_for_report() if r["model"] == "x:y"]
     assert covered and covered[0]["gwp_min"] > 0
+
+
+def test_mark_model_events_error_targets_only_that_model(tmp_path):
+    """Teste que mark_model_events_error n'affecte QUE les events de la paire
+    (provider, model), même si d'autres modèles partagent session_id ou msg_id."""
+    store = SQLiteStore(str(tmp_path / "c.db"))
+    cfg = Config(electricity_mix_zone="FRA", model_params={
+        "ollama/A": {"active": 7.0, "total": 7.0, "arch": "dense", "source": "user"},
+        "ollama/B": {"active": 7.0, "total": 7.0, "arch": "dense", "source": "user"}})
+    # A a deux events ; B partage une session ET un msg_id avec A, mais pas la PAIRE.
+    events = [
+        InferenceEvent("ollama", "A", 100, 200, 0, 0, "2026-06-27T10:00:00Z", "p", "s1", "mA1"),
+        InferenceEvent("ollama", "A", 100, 200, 0, 0, "2026-06-27T10:01:00Z", "p", "s2", "mA2"),
+        InferenceEvent("ollama", "B", 100, 200, 0, 0, "2026-06-27T10:02:00Z", "p", "s1", "mA2"),
+    ]
+    store.ingest(events, _engine(), cfg)
+    assert store.coverage()["uncovered"] == 0          # les 3 couverts
+    store.mark_model_events_error("ollama", "A", "model-params-reset")
+    # seuls les 2 events de A repassent en erreur ; B (s1, mA2) reste couvert
+    assert store.coverage()["uncovered"] == 2
+    assert {r["model"] for r in store.rows_for_report()} == {"B"}
