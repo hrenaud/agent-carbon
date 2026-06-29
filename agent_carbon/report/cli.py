@@ -84,10 +84,11 @@ def render_report(rows: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def render_projects(rows: list[dict], show_all: bool = False) -> str:
-    """Projets classés du plus au moins impactant (GWP, valeur centrale).
-    Par défaut limité au top, le reste regroupé en « autres » ; ``show_all``
-    affiche la liste complète."""
+def render_projects(rows: list[dict], show_all: bool = False,
+                    detailed: bool = False) -> str:
+    """Projets classés du plus au moins impactant (GWP). Par défaut valeur
+    centrale (~) ; ``detailed`` affiche la fourchette min–max. Limité au top,
+    le reste regroupé en « autres » ; ``show_all`` affiche la liste complète."""
     if not rows:
         return ""
     groups: dict[str, list[float]] = {}
@@ -112,18 +113,20 @@ def render_projects(rows: list[dict], show_all: bool = False) -> str:
     else:
         data = list(ranked)
 
-    values = [_central(v[0], v[1], factor) for _, v in data]
+    fmt = _range if detailed else _central
+    values = [fmt(v[0], v[1], factor) for _, v in data]
     name_w = max(len(n) for n, _ in data)
     val_w = max(len(v) for v in values)
 
-    out = [f"Projets les plus impactants — trié par GWP ({unit}) · valeur centrale (~)", ""]
+    legend = "fourchette min–max" if detailed else "valeur centrale (~)"
+    out = [f"Projets les plus impactants — trié par GWP ({unit}) · {legend}", ""]
     for (name, gwp), val in zip(data, values):
         share = ((gwp[0] + gwp[1]) / 2) / total_mid
         filled = min(_BAR_WIDTH, round(share * _BAR_WIDTH))
         bar = "█" * filled + " " * (_BAR_WIDTH - filled)
         out.append(f"  {name.ljust(name_w)}  {val.rjust(val_w)}  {bar}  {round(share * 100):>3d}%")
     out.append("  " + "─" * (name_w + val_w + _BAR_WIDTH + 10))
-    out.append(f"  {'TOTAL'.ljust(name_w)}  {_central(total[0], total[1], factor).rjust(val_w)}")
+    out.append(f"  {'TOTAL'.ljust(name_w)}  {fmt(total[0], total[1], factor).rjust(val_w)}")
     return "\n".join(out)
 
 
@@ -143,11 +146,19 @@ def _truncate(name: str, cap: int = _NAME_CAP) -> str:
 
 
 def _intensity_cell(value: float, criterion: str) -> str:
-    """Valeur centrale /h d'un critère, échelle d'unité choisie par cellule."""
+    """Valeur centrale d'un critère, échelle d'unité choisie par cellule."""
     factor, unit = _scale(value, criterion)
     if value * factor < 0.005:
         return "≈0"
     return f"~{value * factor:.3g} {unit}"
+
+
+def _cell_detailed(lo: float, hi: float, criterion: str) -> str:
+    """Cellule détaillée d'un critère : fourchette min–max (échelle par la borne haute)."""
+    factor, unit = _scale(hi or 1.0, criterion)
+    if hi * factor < 0.005:
+        return "≈0"
+    return f"{lo * factor:.3g}–{hi * factor:.3g} {unit}"
 
 
 def _model_table(title: str, sec_header: str, headers: dict[str, str],
@@ -173,31 +184,46 @@ def _model_table(title: str, sec_header: str, headers: dict[str, str],
     return "\n".join(out)
 
 
-def render_intensity(rows: list[dict]) -> str:
+def render_intensity(rows: list[dict], detailed: bool = False) -> str:
     """Intensité par modèle, par heure de travail effectif, en tableau aligné :
-    une ligne par modèle (débit tokens/h + 5 critères d'émission /h)."""
+    une ligne par modèle (débit tokens/h + 5 critères d'émission /h). Par défaut
+    valeur centrale (~) ; ``detailed`` affiche la fourchette min–max /h."""
+    def _cells(r):
+        h = r["hours"]
+        if detailed:
+            return {c: _cell_detailed(r[f"{c}_min"] / h, r[f"{c}_max"] / h, c)
+                    for c in _INTENSITY_COLS}
+        return {c: _intensity_cell(r[c] / h, c) for c in _INTENSITY_COLS}
     table = [{
         "name": _truncate(_short_model(r["model"])),
         "second": _kilo(r["tokens"] / r["hours"]),
         "sort": r["tokens"] / r["hours"],
-        "cells": {c: _intensity_cell(r[c] / r["hours"], c) for c in _INTENSITY_COLS},
+        "cells": _cells(r),
     } for r in rows]
+    suffix = "(min–max)" if detailed else "(~ central)"
     return _model_table(
-        "Intensité par modèle — par heure de travail effectif (~ central)",
+        f"Intensité par modèle — par heure de travail effectif {suffix}",
         "tok/h", _COL_HEADER, table)
 
 
-def render_tokens_by_model(rows: list[dict]) -> str:
-    """Tokens totaux utilisés par modèle sur la plage + impact central des 5
-    critères, en tableau aligné (une ligne par modèle), trié par tokens."""
+def render_tokens_by_model(rows: list[dict], detailed: bool = False) -> str:
+    """Tokens totaux utilisés par modèle sur la plage + impact des 5 critères,
+    en tableau aligné (une ligne par modèle), trié par tokens. Par défaut valeur
+    centrale (~) ; ``detailed`` affiche la fourchette min–max."""
+    def _cells(r):
+        if detailed:
+            return {c: _cell_detailed(r[f"{c}_min"], r[f"{c}_max"], c)
+                    for c in _INTENSITY_COLS}
+        return {c: _intensity_cell(r[c], c) for c in _INTENSITY_COLS}
     table = [{
         "name": _truncate(_short_model(r["model"])),
         "second": _kilo(r["tokens"]),
         "sort": r["tokens"],
-        "cells": {c: _intensity_cell(r[c], c) for c in _INTENSITY_COLS},
+        "cells": _cells(r),
     } for r in rows]
+    suffix = "(min–max)" if detailed else "(~ central)"
     out = _model_table(
-        "Tokens & impact par modèle — total sur la plage (~ central)",
+        f"Tokens & impact par modèle — total sur la plage {suffix}",
         "tokens", _TOTAL_HEADER, table)
     if not out:
         return ""

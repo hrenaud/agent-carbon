@@ -123,6 +123,28 @@ def test_render_tokens_by_model_empty():
     assert render_tokens_by_model([]) == ""
 
 
+_MINMAX_ROW = {
+    "model": "claude-opus-4-8", "hours": 1.0, "tokens": 566000,
+    "gwp": 1.5, "gwp_min": 1.0, "gwp_max": 2.0,
+    "wcf": 7.5, "wcf_min": 5.0, "wcf_max": 10.0,
+    "adpe": 1.5e-5, "adpe_min": 1e-5, "adpe_max": 2e-5,
+    "energy": 7.5, "energy_min": 5.0, "energy_max": 10.0,
+    "pe": 75.0, "pe_min": 50.0, "pe_max": 100.0,
+}
+
+
+def test_render_tokens_by_model_detailed_shows_minmax():
+    out = render_tokens_by_model([dict(_MINMAX_ROW)], detailed=True)
+    assert "1–2" in out and "kgCO2eq" in out   # fourchette GWP min–max
+    assert "~1.5" not in out                    # pas la valeur centrale
+
+
+def test_render_intensity_detailed_shows_minmax():
+    out = render_intensity([dict(_MINMAX_ROW)], detailed=True)  # hours=1 → /h = bornes
+    assert "1–2" in out and "kgCO2eq" in out
+    assert "~1.07" not in out
+
+
 def test_render_uncovered_lists_tokens_and_suggests_resolve():
     rows = [
         {"model": "nvidia/nemotron-3-super-120b-a12b:free", "tokens": 3480, "events": 3},
@@ -168,6 +190,13 @@ def test_render_projects_show_all_lists_every_project():
     assert "autres" not in out
     for i in range(1, 9):
         assert f"p{i}" in out
+
+
+def test_render_projects_detailed_shows_minmax():
+    rows = _proj_rows([("projA", 1.0, 2.0), ("projB", 5.0, 7.0)])
+    out = render_projects(rows, detailed=True)
+    assert "5–7" in out      # fourchette min–max du plus impactant
+    assert "~6" not in out   # pas la valeur centrale
 
 
 def test_render_projects_empty():

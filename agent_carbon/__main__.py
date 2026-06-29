@@ -119,6 +119,8 @@ def main(argv: list[str] | None = None) -> int:
     p_rep.add_argument("--since", default=None)
     p_rep.add_argument("--all-projects", action="store_true",
                        help="lister tous les projets (sinon top 5 + « autres »)")
+    p_rep.add_argument("--detail", "--detailed", dest="detail", action="store_true",
+                       help="afficher les fourchettes min–max au lieu de la valeur centrale (~)")
 
     p_st = sub.add_parser("statusline", help="ligne compacte pour la statusline")
     p_st.add_argument("--db", default=_DEFAULT_DB)
@@ -151,16 +153,16 @@ def main(argv: list[str] | None = None) -> int:
         _maybe_detect_mix(config)
         rows = store.rows_for_report(args.since)
         out = render_report(rows)
-        projects = render_projects(rows, show_all=args.all_projects)
+        projects = render_projects(rows, show_all=args.all_projects, detailed=args.detail)
         if projects:
             out += "\n\n" + projects
-        tokens = render_tokens_by_model(store.tokens_by_model(args.since))
+        tokens = render_tokens_by_model(store.tokens_by_model(args.since), detailed=args.detail)
         if tokens:
             out += "\n\n" + tokens
         uncovered = render_uncovered(store.uncovered_by_model(args.since))
         if uncovered:
             out += "\n\n" + uncovered
-        intensity = render_intensity(store.intensity_by_model(args.since))
+        intensity = render_intensity(store.intensity_by_model(args.since), detailed=args.detail)
         if intensity:
             out += "\n\n" + intensity
         print(out)

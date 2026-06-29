@@ -6,6 +6,7 @@ Toutes les évolutions notables du projet. Format inspiré de [Keep a Changelog]
 
 ### Corrigé
 
+- **Restauration du flag `report --detail`** (régressé lors de la fusion centrale+min–max dans la seule section « Impact total ») : `--detail` (alias `--detailed`) affiche de nouveau les **fourchettes min–max** dans les tableaux par modèle/projet (« Projets », « Tokens & impact par modèle », « Intensité ») au lieu de la valeur centrale `~`. Le store expose désormais les bornes min/max par critère ; vue compacte (`~`) par défaut.
 - **`report --since` ne filtrait pas la section « Intensité par modèle »** : `intensity_by_model()` agrégeait tout l'historique quelle que soit la plage demandée. La méthode accepte désormais `since` et la commande `report` le propage — toutes les sections respectent `--since` de façon cohérente.
 
 ### Ajouté

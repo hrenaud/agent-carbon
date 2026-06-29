@@ -18,6 +18,22 @@ def test_ingest_then_report(tmp_path, capsys):
     assert "GWP" in out
 
 
+def test_report_detail_flag_shows_minmax(tmp_path, capsys):
+    db = str(tmp_path / "carbon.db")
+    main(["ingest", "--source", str(FIXTURES), "--db", db])
+    capsys.readouterr()
+    # vue compacte par défaut : titres « (~ central) »
+    main(["report", "--db", db])
+    assert "(~ central)" in capsys.readouterr().out
+    # --detail et son alias --detailed basculent les tableaux par modèle en min–max
+    for flag in ("--detail", "--detailed"):
+        rc = main(["report", "--db", db, flag])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "(min–max)" in out
+        assert "(~ central)" not in out
+
+
 def test_ingest_is_idempotent_via_cli(tmp_path, capsys):
     db = str(tmp_path / "carbon.db")
     main(["ingest", "--source", str(FIXTURES), "--db", db])

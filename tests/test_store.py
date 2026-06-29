@@ -49,6 +49,7 @@ def test_intensity_by_model(tmp_path):
     assert abs(d["hours"] - 1.0) < 0.01
     assert d["tokens"] == 600
     assert d["gwp"] > 0
+    assert d["gwp_max"] >= d["gwp_min"] > 0  # bornes exposées (vue détaillée)
 
 
 def test_intensity_by_model_filters_by_since(tmp_path):
@@ -95,6 +96,9 @@ def test_tokens_by_model_sums_all_token_types(tmp_path):
     assert d["model"] == "claude-opus-4-8"
     assert d["tokens"] == 760  # 380 × 2
     assert d["gwp"] > 0
+    # bornes min–max exposées (pour la vue détaillée), centrale encadrée
+    assert d["gwp_max"] >= d["gwp_min"] > 0
+    assert d["gwp_min"] <= d["gwp"] <= d["gwp_max"]
 
 
 def test_tokens_by_model_filters_by_since(tmp_path):

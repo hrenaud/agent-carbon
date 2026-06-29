@@ -36,6 +36,13 @@ CREATE TABLE IF NOT EXISTS pending_models (
 """
 
 
+# critère → (alias colonne min, alias colonne max) dans les SELECT agrégés
+# de tokens_by_model / intensity_by_model.
+_CRIT_COLS = {"energy": ("emin", "emax"), "gwp": ("gmin", "gmax"),
+              "adpe": ("amin", "amax"), "pe": ("pmin", "pmax"),
+              "wcf": ("wmin", "wmax")}
+
+
 def _parse_ts(ts: str) -> datetime | None:
     try:
         return datetime.fromisoformat(ts.replace("Z", "+00:00"))
@@ -192,14 +199,11 @@ class SQLiteStore:
             hours = (r["sec"] or 0) / 3600.0
             if hours <= 0:
                 continue
-            out.append({
-                "model": r["model"], "hours": hours, "tokens": r["toks"],
-                "energy": (r["emin"] + r["emax"]) / 2,
-                "gwp": (r["gmin"] + r["gmax"]) / 2,
-                "adpe": (r["amin"] + r["amax"]) / 2,
-                "pe": (r["pmin"] + r["pmax"]) / 2,
-                "wcf": (r["wmin"] + r["wmax"]) / 2,
-            })
+            row = {"model": r["model"], "hours": hours, "tokens": r["toks"]}
+            for c, (lo, hi) in _CRIT_COLS.items():
+                row[c] = (r[lo] + r[hi]) / 2           # centrale (vue compacte)
+                row[f"{c}_min"], row[f"{c}_max"] = r[lo], r[hi]   # bornes (vue détaillée)
+            out.append(row)
         return out
 
     def tokens_by_model(self, since: str | None = None) -> list[dict]:
@@ -226,14 +230,11 @@ class SQLiteStore:
         sql += " GROUP BY e.model"
         out = []
         for r in self.conn.execute(sql, tuple(params)):
-            out.append({
-                "model": r["model"], "tokens": r["toks"] or 0,
-                "energy": (r["emin"] + r["emax"]) / 2,
-                "gwp": (r["gmin"] + r["gmax"]) / 2,
-                "adpe": (r["amin"] + r["amax"]) / 2,
-                "pe": (r["pmin"] + r["pmax"]) / 2,
-                "wcf": (r["wmin"] + r["wmax"]) / 2,
-            })
+            row = {"model": r["model"], "tokens": r["toks"] or 0}
+            for c, (lo, hi) in _CRIT_COLS.items():
+                row[c] = (r[lo] + r[hi]) / 2           # centrale (vue compacte)
+                row[f"{c}_min"], row[f"{c}_max"] = r[lo], r[hi]   # bornes (vue détaillée)
+            out.append(row)
         return out
 
     def uncovered_by_model(self, since: str | None = None) -> list[dict]:
