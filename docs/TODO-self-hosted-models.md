@@ -36,18 +36,24 @@ on somme `rec.totals[crit]` (min/max). Référence cloud = `claude-opus-4-8` (ti
 (`error` non nul) calculé par l'**ancien** moteur. L'ingestion étant idempotente
 par `msg_id`, relancer `agent-carbon ingest` ne les recalculait pas.
 
-**Décision** : on est en phase de dev, personne d'autre n'utilise l'outil → pas
-de surface CLA exposée. **Script jetable** (scratchpad, `recompute.py`) plutôt
-qu'une commande `recompute`. À recréer si besoin : il déclare les params réels en
-milliards (couples MoE) dans `config.json`, sélectionne les events dont
-`impacts.error IS NOT NULL`, reconstruit l'`InferenceEvent` depuis la ligne,
-rappelle `engine.compute()` et fait `INSERT OR REPLACE` via `_store_impact`.
-`coverage()`/rapport se mettent à jour seuls (ils lisent la table `impacts`).
+**Décision (historique)** : le premier recompute s'est fait via un **script jetable**
+(scratchpad, `recompute.py`). Depuis le chantier `agent-carbon-resolve`, le recompute
+est une **commande de premier ordre** : `agent-carbon resolve --recompute` (et
+`store.recompute_errors()` en interne) — plus besoin de script jetable.
 
 **Résultat terrain** : non couverts **8360 → 82** (8278 résolus ; les 82 restants =
-`<synthetic>` à 0 token + modèles externes `:free` écartés). Intensité
+`<synthetic>` à 0 token + modèles externes `:free`). Intensité
 Qwen3.6-35B-A3B confirmée ≈ **12,4 gCO₂eq/M tokens**. Params persistés dans
 `config.json` (milliards + `arch=moe`) → futurs `ingest` résolus aussi.
+
+**Suite (2026-06-29) — `agent-carbon-resolve`** : les modèles externes `:free` ne
+sont plus « écartés ». La commande `agent-carbon resolve` (et le skill
+`/agent-carbon-resolve`) mappe leur nom brut vers un repo Hugging Face, récupère les
+params (safetensors) et recalcule. Validation terrain : `openai/gpt-oss-120b:free`
+→ `openai/gpt-oss-120b` (120,4 Md) et `z-ai/glm-4.5-air:free` → `zai-org/GLM-4.5-Air`
+(110,5 Md) résolus ; **non couverts 82 → 76** (6 events). Restent `<synthetic>` (70,
+exclus du rapport) + `nvidia/nemotron-…:free` et `poolside/laguna-…:free`
+(pas de repo HF public évident — laissés non couverts honnêtement).
 
 ## Suite 2 — Gérer le couple actif/total MoE dans `agent-carbon models`
 
