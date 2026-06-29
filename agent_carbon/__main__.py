@@ -8,6 +8,11 @@ from agent_carbon.config import Config, DEFAULT_CONFIG_PATH
 from agent_carbon.config_detect import detect_zone, system_locale
 from agent_carbon.dates import parse_since
 from agent_carbon.impact.engine import EcoLogitsEngine
+from agent_carbon.impact.params import (
+    ModelParamsResolver,
+    fetch_hf_params,
+    fetch_moe_params_from_hf,
+)
 from agent_carbon.impact.resolver import ModelResolver
 from agent_carbon.report.cli import (
     render_intensity,
@@ -65,18 +70,73 @@ def _cmd_models(args) -> int:
     config = Config.load()
     accepted = []  # Collect (provider, model) to clear AFTER save
     for row in pending:
-        ans = input(f"Params totaux pour {row['model']} "
-                    "en milliards (ex. 7 pour un modèle 7B, vide = ignorer) : ").strip()
-        if not ans:
-            continue
-        try:
-            total = float(ans)
-        except ValueError:
-            print("Format invalide, ignoré.")
-            continue
-        config.model_params[f"{row['provider']}/{row['model']}"] = {
-            "active": total, "total": total, "arch": "dense", "source": "user"}
-        accepted.append((row["provider"], row["model"]))
+        # Étape 1 : type (dense/MoE)
+        ans = input(
+            f"Type pour {row['model']} (dense/MoE, vide = dense) : "
+        ).strip().lower()
+        if not ans or ans == "dense":
+            # Dense : seul total demandé
+            total_str = input(
+                f"Params totaux pour {row['model']} "
+                "en milliards (ex. 7 pour un modèle 7B, vide = ignorer) : "
+            ).strip()
+            if not total_str:
+                continue
+            try:
+                total = float(total_str)
+            except ValueError:
+                print("Format invalide, ignoré.")
+                continue
+            config.model_params[f"{row['provider']}/{row['model']}"] = {
+                "active": total, "total": total, "arch": "dense", "source": "user"}
+            accepted.append((row["provider"], row["model"]))
+        elif ans == "moe":
+            # MoE : actif demandé, total cherché dans cache, registry, HF
+            active_str = input(
+                f"Params actifs pour {row['model']} "
+                "en milliards (ex. 3,5 pour 3,5 Md) : "
+            ).strip()
+            if not active_str:
+                continue
+            try:
+                active = float(active_str)
+            except ValueError:
+                print("Format invalide, ignoré.")
+                continue
+            # 1) Chercher dans cache (peut-être dense)
+            key = f"{row['provider']}/{row['model']}"
+            cache_entry = config.model_params.get(key)
+            cache_total = None
+            if cache_entry is not None:
+                cache_total = float(cache_entry.get("total", active))
+            # 2) Chercher dans registry via ModelParamsResolver
+            resolver = ModelParamsResolver(config)
+            res = resolver.resolve(row["provider"], row["model"])
+            # 3) Tenter fetch MoE depuis HF
+            hf_res = fetch_moe_params_from_hf(row["model"], active)
+            if hf_res is not None:
+                # HF trouvé → stocker comme MoE avec hf_repo
+                total = float(hf_res.total)
+                config.model_params[key] = {
+                    "active": active, "total": total,
+                    "arch": "moe", "source": "user",
+                    "hf_repo": row["model"]}
+            elif cache_total is not None:
+                # Cache trouvé → utiliser son total, garder l'archi MoE du user
+                total = cache_total
+                # Ne pas écraser l'archi du cache si c'est dense
+                # Laisser l'entry existante inchangée, juste stocker active si manquant
+                if key not in config.model_params:
+                    config.model_params[key] = {
+                        "active": active, "total": total,
+                        "arch": "moe", "source": "user"}
+            else:
+                # 4) Fallback : ni cache ni HF → total = active, stocker pour résolution future
+                total = active
+                config.model_params[key] = {
+                    "active": active, "total": total,
+                    "arch": "moe", "source": "user"}
+            accepted.append((row["provider"], row["model"]))
     # Save config durably BEFORE clearing any pending models
     config.save()
     # Now clear the accepted models from pending

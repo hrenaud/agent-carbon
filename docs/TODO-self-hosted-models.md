@@ -9,17 +9,11 @@
 
 ## Suite 2 — Gérer le couple actif/total MoE dans `agent-carbon models`
 
-**Limite actuelle** : `_cmd_models` (`agent_carbon/__main__.py`) ne demande qu'**un**
-chiffre et stocke `{"active": total, "total": total, "arch": "dense"}`. Pour un MoE
-(ex. Qwen3 35B-A3B : actif ≈ 3, total ≈ 35 Md), ça surestime l'énergie (active=total).
-Aujourd'hui le vrai couple n'est atteignable qu'en éditant `model_params` à la main.
+**Livrée**. La sous-commande `models` interroge maintenant l'archi (dense/MoE) :
+si MoE, demande l'actif, résout le total via cache → registre → HF. Stocke
+`arch="moe"` avec le couple `(actif, total)`.
 
-**À faire** : faire demander à `models` l'archi (dense/MoE) et, si MoE, le couple
-`(actif, total)` en milliards, et stocker `arch="moe"`. Le moteur sait déjà gérer
-active≠total (`compute_llm_impacts` + `ParamsResult`). Penser au tier HF : il
-suppose dense (`moe-assumed-dense`) — une déclaration MoE manuelle doit pouvoir
-écraser/préciser l'entrée de cache. Le couple MoE existe déjà côté `resolve --set`
-(`repo:<actifs>`) — s'en inspirer pour la saisie interactive.
+## Suite 4 — Étape « recherche web » dans la cascade de résolution (à vérifier)
 
 ## Suite 4 — Étape « recherche web » dans la cascade de résolution (à vérifier)
 

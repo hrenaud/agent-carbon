@@ -37,6 +37,26 @@ def fetch_hf_params(repo: str) -> ParamsResult | None:
                         source="huggingface", warnings=["moe-assumed-dense"])
 
 
+def fetch_moe_params_from_hf(repo: str, active: float) -> ParamsResult | None:
+    """Même chose que fetch_hf_params mais pour un MoE : le total vient de HF,
+    l'actif est fourni par l'utilisateur. Si HF échoue, retourne None."""
+    try:
+        import importlib
+        huggingface_hub = importlib.import_module("huggingface_hub")
+    except (ImportError, ValueError):
+        return None
+    try:
+        info = huggingface_hub.model_info(repo, timeout=10)
+        if info.safetensors is None:
+            return None
+        total = float(info.safetensors.total) / 1e9
+    except Exception:
+        return None
+    if total <= 0:
+        return None
+    return ParamsResult(active=active, total=total, arch="moe", source="huggingface")
+
+
 class ModelParamsResolver:
     """Résout (params actifs, totaux) pour un modèle, en cascade :
     registre EcoLogits → cache config → Hugging Face → None."""

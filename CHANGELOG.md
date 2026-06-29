@@ -15,6 +15,12 @@ Toutes les évolutions notables du projet. Format inspiré de [Keep a Changelog]
 
 ### Ajouté
 
+- **MoE dans `agent-carbon models`** (Suite 2) : la sous-commande `models` interroge
+  maintenant l'architecture (dense/MoE) ; si MoE, demande l'actif (en milliards),
+  résout le total par cascade (cache → registre EcoLogits → Hugging Face), et
+  stocke `arch="moe"` avec le couple `(actif, total)`. Le totalvient de HF (seul
+  le total est nécessaire, l'actif est déclaré par l'utilisateur). Fallback
+  `total = active` si ni cache ni HF ne trouvent le modèle.
 - **MoE dans `resolve --set`** (Suite 3) : `--set "provider/model=repo:<actifs>"` déclare un Mixture-of-Experts — le **total** vient de Hugging Face (safetensors), l'**actif** (en milliards) est saisi, `arch="moe"`. Évite la **surestimation ~10×** des modèles routés (EcoLogits calcule sur les params actifs), constatée sur `nemotron-3-super-120b-a12b` et `laguna-m.1` qu'il fallait jusqu'ici éditer à la main. Le `:` est sans ambiguïté (un repo HF n'en contient pas) ; garde-fous actif `> 0` et `≤ total`. Le skill `/agent-carbon-resolve` propose l'actif (souvent lisible dans le nom, ex. `-a12b`). La syntaxe dense `--set "P/M=repo"` est inchangée.
 - **Skill `/agent-carbon-help` + rappel `--help` en pied de rapport** : chaque rapport se termine par un rappel des options (`--since`, `--detail`, `--all-projects`) renvoyant vers `agent-carbon report --help` et le skill `/agent-carbon-help`, qui restitue l'aide réelle de la CLI (toutes commandes) sans rien inventer.
 - **MVP** : compteur d'impact multi-critères (énergie, GWP, eau, ADPe, PE) avec fourchettes min–max, pour les sessions Claude Code.
