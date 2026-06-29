@@ -75,7 +75,10 @@ class ModelParamsResolver:
             # Garde explicite : safetensors peut être None si le repo n'a pas de fichiers .safetensors
             if info.safetensors is None:
                 return None
-            total = float(info.safetensors.total)
+            # safetensors.total est un compte BRUT de paramètres ; EcoLogits
+            # (compute_llm_impacts) attend le nombre EN MILLIARDS, comme le
+            # registre (ex. 7 pour un modèle 7B). On convertit donc /1e9.
+            total = float(info.safetensors.total) / 1e9
         except Exception:
             # 404, offline, repo privé, pas de safetensors… → on échoue proprement
             return None

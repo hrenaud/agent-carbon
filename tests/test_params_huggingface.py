@@ -14,14 +14,16 @@ def _fake_hf(total, monkeypatch):
 
 
 def test_huggingface_dense_sets_active_equals_total(monkeypatch):
+    # safetensors.total est un compte BRUT (7 milliards) ; EcoLogits attend
+    # le nb de params EN MILLIARDS → ParamsResult doit valoir 7.0, pas 7e9.
     _fake_hf(7_000_000_000, monkeypatch)
     cfg = Config()
     r = ModelParamsResolver(cfg)
     res = r.resolve("ollama", "Qwen/Qwen2.5-7B")
     assert res.source == "huggingface"
-    assert res.active == res.total == 7_000_000_000
-    # mis en cache
-    assert "ollama/Qwen/Qwen2.5-7B" in cfg.model_params
+    assert res.active == res.total == 7.0
+    # mis en cache, en milliards
+    assert cfg.model_params["ollama/Qwen/Qwen2.5-7B"]["total"] == 7.0
 
 
 def test_huggingface_network_error_returns_none(monkeypatch):
@@ -63,14 +65,14 @@ def test_huggingface_cache_hit_avoids_second_call(monkeypatch):
     res1 = r.resolve("ollama", "Qwen/Qwen2.5-7B")
     assert res1 is not None
     assert res1.source == "huggingface"
-    assert res1.total == 7_000_000_000
+    assert res1.total == 7.0  # 7e9 brut → 7 milliards
     assert call_count[0] == 1
 
     # Deuxième resolve: doit lire le cache, pas rappeler model_info
     res2 = r.resolve("ollama", "Qwen/Qwen2.5-7B")
     assert res2 is not None
     assert res2.source == "huggingface"  # Source depuis le cache (écrit par HF)
-    assert res2.total == 7_000_000_000
+    assert res2.total == 7.0
     assert call_count[0] == 1  # Pas d'appel supplémentaire
 
 

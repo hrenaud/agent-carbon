@@ -53,14 +53,14 @@ Les 3 premiers tiers renvoient un `ParamsResult(active, total, source)`. Le 4e r
 
 `Config` gagne le chargement/sauvegarde depuis `~/.agent-carbon/config.json`. Champs :
 
-| champ                  | défaut          | rôle                                                               |
-| ---------------------- | --------------- | ------------------------------------------------------------------ |
-| `electricity_mix_zone` | `None`          | sentinelle « non renseigné » → déclenche la détection au 1er usage |
-| `datacenter_pue`       | plage `1.1–1.5` | PUE de l'hébergement auto-hébergé (cas « inconnu »)                |
-| `datacenter_wue`       | `0.0`           | WUE (eau de refroidissement) — 0 = local                           |
-| `model_params`         | `{}`            | cache `{"<provider>/<model>": {active, total, arch, source}}`      |
-| `throughput_tok_s`     | `50.0`          | inchangé                                                           |
-| `model_aliases`        | `{}`            | inchangé (ModelResolver)                                           |
+| champ                  | défaut          | rôle                                                                                              |
+| ---------------------- | --------------- | ------------------------------------------------------------------------------------------------- |
+| `electricity_mix_zone` | `None`          | sentinelle « non renseigné » → déclenche la détection au 1er usage                                |
+| `datacenter_pue`       | plage `1.1–1.5` | PUE de l'hébergement auto-hébergé (cas « inconnu »)                                               |
+| `datacenter_wue`       | `0.0`           | WUE (eau de refroidissement) — 0 = local                                                          |
+| `model_params`         | `{}`            | cache `{"<provider>/<model>": {active, total, arch, source}}` — `active`/`total` **en milliards** |
+| `throughput_tok_s`     | `50.0`          | inchangé                                                                                          |
+| `model_aliases`        | `{}`            | inchangé (ModelResolver)                                                                          |
 
 > Le défaut historique `USA` est abandonné au profit de `None` pour pouvoir distinguer « non renseigné » de « choisi ».
 
@@ -78,7 +78,7 @@ Les 3 premiers tiers renvoient un `ParamsResult(active, total, source)`. Le 4e r
 `ModelParamsResolver(config)` expose `resolve(provider, model) -> ParamsResult | None`, enchaînant les tiers 1→3 décrits plus haut. Le tier HF :
 
 - tente `model_info(model)` sur le Hub ; toute erreur réseau/404 → renvoie `None` (jamais d'exception qui casse le batch) ;
-- `safetensors.total` → params totaux ; **dense → `active = total`** ;
+- `safetensors.total` (compte brut) **÷ 1e9 → params en milliards** (unité attendue par EcoLogits, comme le registre) ; **dense → `active = total`** ;
 - **MoE** : safetensors ne donne pas l'actif → **assumé dense** (conservateur) + warning `moe-assumed-dense` ; affinable plus tard par déclaration manuelle ;
 - résultat **écrit dans `config.model_params`** → un seul appel réseau par modèle, offline ensuite.
 

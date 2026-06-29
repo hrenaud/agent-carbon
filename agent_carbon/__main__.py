@@ -52,7 +52,7 @@ def _cmd_models(args) -> int:
     accepted = []  # Collect (provider, model) to clear AFTER save
     for row in pending:
         ans = input(f"Params totaux pour {row['model']} "
-                    "(ex. 7e9, vide = ignorer) : ").strip()
+                    "en milliards (ex. 7 pour un modèle 7B, vide = ignorer) : ").strip()
         if not ans:
             continue
         try:
