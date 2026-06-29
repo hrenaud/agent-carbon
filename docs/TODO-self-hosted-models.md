@@ -3,7 +3,8 @@
 > Backlog des suites **non encore implémentées**. Le socle est livré (chaîne de
 > résolution registre → cache → Hugging Face → file ; fallback moteur pour modèles
 > inconnus ; recompute via `agent-carbon resolve --recompute` ; résolution des
-> modèles tiers via `resolve` / `/agent-carbon-resolve`).
+> modèles tiers via `resolve` / `/agent-carbon-resolve`, dont le **couple MoE** par
+> `--set "P/M=repo:<actifs>"`).
 > Spec/plan d'origine : `docs/superpowers/specs|plans/2026-06-29-self-hosted-models*`.
 
 ## Suite 2 — Gérer le couple actif/total MoE dans `agent-carbon models`
@@ -17,13 +18,8 @@ Aujourd'hui le vrai couple n'est atteignable qu'en éditant `model_params` à la
 `(actif, total)` en milliards, et stocker `arch="moe"`. Le moteur sait déjà gérer
 active≠total (`compute_llm_impacts` + `ParamsResult`). Penser au tier HF : il
 suppose dense (`moe-assumed-dense`) — une déclaration MoE manuelle doit pouvoir
-écraser/préciser l'entrée de cache.
-
-> **Suite 3 livrée** (couple MoE dans `resolve --set`) : `--set "P/M=repo:<actifs>"`
-> déclare un MoE — total = safetensors HF, actif = saisi, `arch="moe"`. Le `:` est
-> sans ambiguïté (un repo HF n'en contient pas). Garde-fous : actif `> 0` et `≤ total`.
-> Le skill `/agent-carbon-resolve` propose l'actif (souvent lisible dans le nom, ex.
-> `-a12b`). Reste la Suite 2 (`models` interactif, encore dense-only).
+écraser/préciser l'entrée de cache. Le couple MoE existe déjà côté `resolve --set`
+(`repo:<actifs>`) — s'en inspirer pour la saisie interactive.
 
 ## Suite 4 — Étape « recherche web » dans la cascade de résolution (à vérifier)
 
@@ -39,7 +35,7 @@ archi MoE + couple actif/total).
 utilisateur**. Cette étape 3 relève du skill `/agent-carbon-resolve` (le LLM fait la
 recherche et propose le repo + couple MoE), pas du code CLI pur — la CLI reste le
 vérificateur déterministe (HF) et le persisteur. À cadrer : où vit l'étape web
-(skill vs helper), comment restituer l'archi MoE (cf. Suite 3), garde-fou « ne pas
+(skill vs helper), comment restituer l'archi MoE (réutiliser `--set repo:<actifs>`), garde-fou « ne pas
 inventer » conservé (params toujours issus de HF, jamais du texte web).
 
 ## Rappels d'unité (piège)
