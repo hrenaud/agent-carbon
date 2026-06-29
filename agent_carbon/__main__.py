@@ -13,7 +13,9 @@ from agent_carbon.report.cli import (
     render_projects,
     render_report,
     render_tokens_by_model,
+    render_uncovered,
 )
+from agent_carbon.resolve.cli import cmd_resolve
 from agent_carbon.statusline.line import render_statusline
 from agent_carbon.store.db import SQLiteStore
 
@@ -124,6 +126,16 @@ def main(argv: list[str] | None = None) -> int:
     p_mod = sub.add_parser("models", help="lister/renseigner les modèles auto-hébergés non résolus")
     p_mod.add_argument("--db", default=_DEFAULT_DB)
 
+    p_res = sub.add_parser("resolve",
+                           help="résoudre les modèles non couverts (params HF) et recalculer")
+    p_res.add_argument("--db", default=_DEFAULT_DB)
+    p_res.add_argument("--since", default=None)
+    p_res.add_argument("--list", action="store_true")
+    p_res.add_argument("--json", action="store_true")
+    p_res.add_argument("--set", action="append", default=[], metavar="P/M=REPO")
+    p_res.add_argument("--forget", action="append", default=[], metavar="P/M")
+    p_res.add_argument("--recompute", action="store_true")
+
     args = parser.parse_args(argv)
     config = Config.load()
 
@@ -145,6 +157,9 @@ def main(argv: list[str] | None = None) -> int:
         tokens = render_tokens_by_model(store.tokens_by_model(args.since))
         if tokens:
             out += "\n\n" + tokens
+        uncovered = render_uncovered(store.uncovered_by_model(args.since))
+        if uncovered:
+            out += "\n\n" + uncovered
         intensity = render_intensity(store.intensity_by_model())
         if intensity:
             out += "\n\n" + intensity
@@ -166,6 +181,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "models":
         return _cmd_models(args)
+
+    if args.cmd == "resolve":
+        return cmd_resolve(args)
 
     return 1
 

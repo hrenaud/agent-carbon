@@ -35,12 +35,18 @@ agent-carbon ingest [--source ~/.claude/projects] [--db ~/.agent-carbon/carbon.d
 
 # Afficher le rapport : impact total multi-critères (valeur centrale ~ + plage min–max),
 # « Projets les plus impactants » (classés par GWP), « Tokens & impact par modèle »
-# (tokens totaux utilisés sur la plage + impact des 5 critères) puis « Intensité par modèle »
-# (tokens/h et émissions/h par heure de travail effectif — compare l'efficacité des modèles).
+# (tokens totaux utilisés sur la plage + impact des 5 critères), « Modèles non couverts »
+# (tokens générés par les modèles à impact non estimé + invite à agent-carbon-resolve)
+# puis « Intensité par modèle » (tokens/h et émissions/h par heure de travail effectif).
 agent-carbon report [--db ~/.agent-carbon/carbon.db] [--since ISO8601] [--all-projects]
 
 # Afficher une ligne compacte pour la statusline
 agent-carbon statusline [--db ~/.agent-carbon/carbon.db]
+
+# Résoudre les modèles non couverts (mapping nom→repo HF + recompute)
+agent-carbon resolve --list [--json]
+agent-carbon resolve --set "provider/model=org/repo" # params HF + recompute auto
+agent-carbon resolve --forget "provider/model" # annule un mapping
 ```
 
 ### Exemples

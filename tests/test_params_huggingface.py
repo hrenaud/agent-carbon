@@ -2,7 +2,7 @@ import sys
 import types
 import pytest
 from agent_carbon.config import Config
-from agent_carbon.impact.params import ModelParamsResolver
+from agent_carbon.impact.params import ModelParamsResolver, fetch_hf_params
 
 
 def _fake_hf(total, monkeypatch):
@@ -85,3 +85,25 @@ def test_huggingface_total_zero_returns_none(monkeypatch):
     res = r.resolve("ollama", "EmptyModel")
     assert res is None
     assert "ollama/EmptyModel" not in cfg.model_params
+
+
+def test_fetch_hf_params_returns_billions(monkeypatch):
+    _fake_hf(7_000_000_000, monkeypatch)
+    res = fetch_hf_params("Org/Repo")
+    assert res is not None
+    assert res.active == res.total == 7.0
+    assert res.arch == "dense"
+    assert res.source == "huggingface"
+
+
+def test_fetch_hf_params_missing_lib_returns_none(monkeypatch):
+    monkeypatch.setitem(sys.modules, "huggingface_hub", None)
+    assert fetch_hf_params("Org/Repo") is None
+
+
+def test_fetch_hf_params_no_safetensors_returns_none(monkeypatch):
+    import types as _t
+    mod = _t.ModuleType("huggingface_hub")
+    mod.model_info = lambda repo_id, **kw: _t.SimpleNamespace(safetensors=None)
+    monkeypatch.setitem(sys.modules, "huggingface_hub", mod)
+    assert fetch_hf_params("Org/Repo") is None

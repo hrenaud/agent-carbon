@@ -3,6 +3,7 @@ from agent_carbon.report.cli import (
     render_projects,
     render_report,
     render_tokens_by_model,
+    render_uncovered,
 )
 
 
@@ -120,6 +121,23 @@ def test_render_tokens_by_model_notes_tokens_vs_impact_basis():
 
 def test_render_tokens_by_model_empty():
     assert render_tokens_by_model([]) == ""
+
+
+def test_render_uncovered_lists_tokens_and_suggests_resolve():
+    rows = [
+        {"model": "nvidia/nemotron-3-super-120b-a12b:free", "tokens": 3480, "events": 3},
+        {"model": "z-ai/glm-4.5-air:free", "tokens": 402, "events": 3},
+    ]
+    out = render_uncovered(rows)
+    assert "non couvert" in out.lower()
+    assert "~3k" in out                       # tokens générés affichés (3480 → ~3k)
+    assert "/agent-carbon-resolve" in out      # invite à lancer le skill
+    # trié par tokens générés décroissant
+    assert out.index("nemotron") < out.index("glm")
+
+
+def test_render_uncovered_empty():
+    assert render_uncovered([]) == ""
 
 
 def _proj_rows(specs):

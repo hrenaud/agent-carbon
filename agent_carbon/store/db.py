@@ -231,6 +231,56 @@ class SQLiteStore:
             })
         return out
 
+    def uncovered_by_model(self, since: str | None = None) -> list[dict]:
+        """Modèles à impact non estimé (error non NULL), hors `<synthetic>`
+        (placeholders Claude Code, 0 token) : tokens générés (sortie) et nombre
+        d'events par modèle sur la plage. Sert à proposer une résolution."""
+        sql = (
+            "SELECT e.model AS model, SUM(e.output_tokens) AS toks, COUNT(*) AS n "
+            "FROM events e JOIN impacts i "
+            "ON e.session_id=i.session_id AND e.msg_id=i.msg_id "
+            "WHERE i.error IS NOT NULL AND e.model != '<synthetic>'"
+        )
+        params: list = []
+        if since:
+            sql += " AND e.timestamp >= ?"
+            params.append(since)
+        sql += " GROUP BY e.model"
+        return [{"model": r["model"], "tokens": r["toks"] or 0, "events": r["n"]}
+                for r in self.conn.execute(sql, tuple(params))]
+
+    def mark_model_events_error(self, provider: str, model: str, error: str) -> None:
+        """Marque en erreur les impacts des events d'un (provider, model) donné,
+        pour qu'un recompute les reprenne (ex. après l'oubli d'un mapping)."""
+        self.conn.execute(
+            "UPDATE impacts SET error = ? WHERE (session_id, msg_id) IN ("
+            "SELECT session_id, msg_id FROM events WHERE provider = ? AND model = ?)",
+            (error, provider, model))
+        self.conn.commit()
+
+    def recompute_errors(self, engine: EcoLogitsEngine, config: Config) -> dict:
+        """Recalcule l'impact de tous les events en erreur (utile après ajout de
+        params). Retourne {before, after} = nombre de non couverts avant/après."""
+        before = self.coverage()["uncovered"]
+        rows = self.conn.execute(
+            "SELECT e.* FROM events e JOIN impacts i "
+            "ON e.session_id=i.session_id AND e.msg_id=i.msg_id "
+            "WHERE i.error IS NOT NULL"
+        ).fetchall()
+        for r in rows:
+            e = InferenceEvent(
+                provider=r["provider"], model=r["model"],
+                input_tokens=r["input_tokens"], output_tokens=r["output_tokens"],
+                cache_creation_tokens=r["cache_creation_tokens"],
+                cache_read_tokens=r["cache_read_tokens"],
+                timestamp=r["timestamp"], project=r["project"],
+                session_id=r["session_id"], msg_id=r["msg_id"],
+                active_seconds=r["active_seconds"], client=r["client"])
+            self._store_impact(e, engine.compute(e, config))
+        self.conn.commit()
+        after = self.coverage()["uncovered"]
+        return {"before": before, "after": after}
+
     def coverage(self) -> dict:
         """Couverture de mesure : total, mesurés (impact estimé), non couverts
         (modèle non modélisé par EcoLogits → event conservé, impact non estimé)."""
