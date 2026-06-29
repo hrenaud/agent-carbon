@@ -1,4 +1,10 @@
+import json
+
+from agent_carbon.config import Config
+from agent_carbon.impact.engine import EcoLogitsEngine
 from agent_carbon.impact.params import fetch_hf_params
+from agent_carbon.impact.resolver import ModelResolver
+from agent_carbon.store.db import SQLiteStore
 
 
 def parse_mapping(spec: str) -> tuple[str, str]:
@@ -32,3 +38,72 @@ def forget(config, keys: list[str]) -> list[dict]:
     """Retire chaque clé de model_params (revert d'un mapping)."""
     return [{"key": k, "removed": config.model_params.pop(k, None) is not None}
             for k in keys]
+
+
+def _print_set(results: list[dict], as_json: bool) -> None:
+    if as_json:
+        print(json.dumps(results, ensure_ascii=False))
+        return
+    for r in results:
+        if r["ok"]:
+            print(f"✓ {r['key']} → {r['repo']} ({r['params']:.1f} Md)")
+        else:
+            print(f"✗ {r['key']} → {r['repo'] or '?'} : {r['error']}")
+
+
+def _print_forget(results: list[dict]) -> None:
+    for r in results:
+        print(f"{'retiré' if r['removed'] else 'absent'} : {r['key']}")
+
+
+def _print_recompute(delta: dict) -> None:
+    print(f"Recompute : {delta['before']} → {delta['after']} non couverts")
+
+
+def _print_list(rows: list[dict], as_json: bool) -> None:
+    if as_json:
+        print(json.dumps(rows, ensure_ascii=False))
+        return
+    if not rows:
+        print("Aucun modèle non couvert.")
+        return
+    for r in rows:
+        print(f"· {r['model']} ({r['tokens']} tokens générés, {r['events']} events)")
+
+
+def cmd_resolve(args) -> int:
+    store = SQLiteStore(args.db)
+    config = Config.load()
+    changed = False
+    forgotten_models = []
+
+    if args.set:
+        results = set_mappings(config, args.set)
+        changed = any(r["ok"] for r in results) or changed
+        _print_set(results, args.json)
+    if args.forget:
+        results = forget(config, args.forget)
+        changed = any(r["removed"] for r in results) or changed
+        _print_forget(results)
+        # Track which models were forgotten to mark their events as errors
+        forgotten_models = [r["key"] for r in results if r["removed"]]
+    if changed:
+        config.save()
+    # Mark events referencing forgotten models as errors, so they'll be recomputed
+    for model_key in forgotten_models:
+        provider, model = model_key.split("/", 1)
+        store.conn.execute(
+            "UPDATE impacts SET error = 'model-params-reset' "
+            "WHERE session_id IN ("
+            "  SELECT session_id FROM events WHERE provider = ? AND model = ?"
+            ") AND msg_id IN ("
+            "  SELECT msg_id FROM events WHERE provider = ? AND model = ?"
+            ")",
+            (provider, model, provider, model))
+        store.conn.commit()
+    if args.recompute or changed:
+        engine = EcoLogitsEngine(ModelResolver(config.model_aliases))
+        _print_recompute(store.recompute_errors(engine, config))
+    if args.list:
+        _print_list(store.uncovered_by_model(args.since), args.json)
+    return 0
