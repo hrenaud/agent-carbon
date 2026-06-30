@@ -1,5 +1,135 @@
 # Changelog
 
+## [0.2.0] — 2026-06-30
+
+### Features
+
+- système de release semver (commande CLI + 31 tests)
+- (models) — soutenir les modèles MoE dans `agent-carbon models`
+- (resolve) — déclarer un MoE dans --set via repo:actif
+- pied de rapport rappelant --help + skill /agent-carbon-help
+- --since accepte une date simple (2026-06-27 ou 27/06/26), sans heure ni TZ
+- skill /agent-carbon-resolve + CTA rapport vers le skill
+- sous-commande agent-carbon resolve (list/set/recompute/forget)
+- resolve set_mappings/forget (mapping nom→repo HF + provenance)
+- store.recompute_errors (recalcule les impacts en erreur)
+- section « Modèles non couverts » + exclusion des <synthetic>
+- section tokens & impact par modèle dans le rapport
+- refonte tableau aligné de l'intensité par modèle
+- dimension client (outil à l'origine de chaque event)
+- CLI — config persistée chargée, sous-commande models, détection mix au report
+- file d'attente pending_models (modèles non résolus, hors batch)
+- moteur — fallback auto-hébergé via compute_llm_impacts (params resolver + mix + PUE)
+- tier Hugging Face (params via safetensors, offline-safe, caché)
+- ModelParamsResolver (tiers registre + cache config)
+- détection zone mix depuis la locale système (alpha-2 → ISO-3)
+- config persistée JSON (mix None, PUE/WUE en plage, cache model_params)
+- ordre des indicateurs uniformisé (GWP, Eau, ADPe, Énergie, PE) + unité kgCO2eq cohérente
+- section « Projets les plus impactants » (tri GWP, top 5 + --all-projects)
+- retire le classement absolu par modèle/projet (sans insight) ; rapport = total + intensité
+- section Intensité par modèle (tokens/h + 5 émissions/h, barre, temps actif)
+- rapport — valeur centrale + plage min–max dans une seule section (retrait du flag --detail)
+- rapport — valeur centrale (~) par défaut, plages min–max via --detail
+- rapport repensé en graphe à barres trié par part de GWP (lisibilité) + retrait tabulate
+- statusline scopée à la session en cours (stdin session_id + ingest transcript courant)
+- rapport — tabulate (colonnes alignées) + échelle d'unité auto (lisibilité des petites valeurs)
+- rapport — tableau aligné + section agrégée avec icônes (5 critères)
+- ajoute l'eau (💧) à la statusline
+- script scripts/statusline.sh pour la statusLine (settings.json pointe le script, pas une commande inline)
+- skill /agent-carbon-report + déploiement des skills par l'installeur
+- ingest non anxiogène — muselle les warnings EcoLogits, résumé de couverture clair
+- installeur one-line (curl | bash) — venv, EcoLogits pin, câblage Claude Code idempotent
+- CLI agent-carbon (ingest/report/statusline) + test end-to-end
+- statusline compacte (énergie + GWP) lisant la DB
+- rapport CLI multi-critères avec fourchettes (par modèle/projet/total)
+- SQLiteStore (events/impacts/sessions, ingestion idempotente, durée)
+- EcoLogitsEngine offline + ImpactRecord (5 critères, alias, gestion erreurs)
+- ModelResolver (table d'alias, filet de sécurité)
+- Collector ABC, ClaudeCodeCollector (parse JSONL réel) + stubs
+- modèle InferenceEvent et Config
+- scaffolding + test de non-régression EcoLogits offline (5 critères)
+
+### Bug Fixes
+
+- restaurer report --detail (min–max par modèle/projet) — régression du retrait du flag
+- report --since filtre aussi la section « Intensité par modèle »
+- revert d'un mapping oublié via méthode store appariée (session,msg)
+- params auto-hébergés en milliards (HF safetensors ÷1e9, saisie en Md)
+- models — parse robuste, sauvegarde avant purge, tests préservation config
+- garde safetensors=None + tests cache-hit et total<=0 (tier HF)
+- message final de l'installeur (retrait du flag --by obsolète)
+- rapport tient en largeur — noms de modèles raccourcis + valeurs négligeables en ≈0
+
+### Documentation
+
+- TODO self-hosted — retirer la Suite 3 (livrée), intégrer le MoE resolve au socle
+- CLAUDE.md projet — index doc (liens corrigés) + rappels (tests, sync clone, milliards)
+- réorg — README orienté utilisateurs, METHODOLOGY (EcoLogits/impacts), CONTRIBUTING (tech, fusionne ARCHITECTURE)
+- TODO self-hosted — ne garder que le backlog (Suites 2/3/4), retirer le fait
+- TODO self-hosted — laguna résolu (MoE), non couverts 82→70, compteur de tests
+- maj README (couverture, skills), CHANGELOG (footer/help), ARCHITECTURE (refonte à l'état actuel)
+- (skill) — agent-carbon-report transmet --detail tel quel (ne pas remapper en --all-projects)
+- noter le bug report --since non filtré sur la section Intensité
+- TODO — MoE dans resolve --set (Suite 3) + étape websearch dans la cascade (Suite 4)
+- commentaires conversion milliards + MoE différé (revue finale)
+- TODO — resolve remplace le script jetable de recompute (validation terrain 82→76)
+- spec agent-carbon-resolve (résolution des modèles non couverts)
+- TODO suites modèles auto-hébergés (recompute base + MoE dans models)
+- docstrings tiers cache/HF + commentaire timeout (revue finale)
+- skill agent-carbon-config + entrée CHANGELOG (modèles auto-hébergés)
+- plan d'implémentation modèles auto-hébergés + spec en JSON
+- spec évaluation des modèles auto-hébergés (chaîne registre→HF→question)
+- documente skill, statusline (script/bascule/preview), couverture d'ingest + CHANGELOG
+- corrige zone défaut (USA) et eau fournie par EcoLogits 0.11.0 (litres)
+- README (présentation + sources d'inspiration) et doc technique
+- plan d'implémentation MVP agent-carbon (10 tâches TDD, du scaffolding aux docs)
+- livrables documentaires MVP (README + doc technique avec sources d'inspiration)
+- section Maintenance post-MVP — suivi version EcoLogits via GHA (détection auto, adoption gardée)
+- pin EcoLogits sur tag stable mlco2/ecologits@0.11.0 (repo canonique), registre models.json
+- spike EcoLogits — offline via git main (5 critères dont eau + modèles actuels), Python>=3.10
+- durée de session captée (MVP) + énergie poste en placeholder séparé hors total
+- principes confidentialité/versioning/config dans le spec (inspirés CodeCarbon + thirsty-llm)
+- spec MVP agent-carbon (collecte Claude Code, EcoLogits offline, DB+rapport CLI+statusline)
+- kickoff — audit claude-carbon, choix EcoLogits, archi collecte/impact/reporting
+
+### Chores
+
+- retirer KICKOFF.md (brief de démarrage obsolète, MVP livré)
+
+### Refactoring
+
+- extraire fetch_hf_params (repo→params réutilisable)
+
+### Tests
+
+- couvre le chemin RangeValue du resolver + commente le choix de moyenne
+- assert input_tokens mapping (revue finale)
+
+### Autres
+
+- Merge feat/agent-carbon-resolve: résolution des modèles non couverts (resolve + skill)
+- Merge feat/tokens-by-model: section tokens & impact par modèle
+- Merge feat/intensity-table: tableau aligné de l'intensité
+- Merge feat/client-dimension: dimension client par event
+- Merge fix/selfhosted-params-billions: params auto-hébergés en milliards (corrige bug d'unité ×1e9)
+- Merge feat/self-hosted-models: évaluation des modèles auto-hébergés (registre→HF→file)
+- Merge feat/criteria-order: ordre indicateurs + libellés cohérents
+- Merge feat/report-projects-ranking: classement projets par GWP
+- Merge feat/drop-absolute-barchart: rapport recentré total + intensité
+- Merge feat/intensity: intensité par modèle (efficacité)
+- Merge feat/report-inline-detail: détail inline (central + plage)
+- Merge feat/report-mean-detail: valeur centrale + vue détaillée
+- Merge feat/report-barchart: rapport en graphe à barres lisible
+- Merge feat/statusline-session: statusline = session courante
+- Merge feat/report-tabulate: tableau tabulate + unités lisibles
+- Merge feat/report-format: tableau aligné + section icônes
+- Merge feat/statusline-water: eau dans la statusline
+- Merge feat/docs: doc skill/statusline/couverture + CHANGELOG
+- Merge feat/statusline-script: statusLine via script versionné
+- Merge feat/skills: skill /agent-carbon-report + déploiement via installeur
+- Merge feat/ingest-ux: sortie d'ingest claire et rassurante (couverture)
+- Merge feat/installer: installeur one-line (curl | bash)
+- Merge feat/mvp-implementation: MVP agent-carbon (collecte Claude Code, EcoLogits offline, DB+rapport+statusline)
 Toutes les évolutions notables du projet. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
 > Ce changelog est généré automatiquement par `agent-carbon release` entre deux tags.
