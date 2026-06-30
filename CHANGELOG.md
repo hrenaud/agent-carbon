@@ -2,6 +2,15 @@
 
 Toutes les évolutions notables du projet. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+> Ce changelog est généré automatiquement par `agent-carbon release` entre deux tags.
+> Les entrées manuelles ci-dessous restent valables avant le premier tag `v*`.
+
+## Pré-versioning (entries manuelles)
+
+### Système de release
+
+- **Nouvelle sous-commande `agent-carbon release bump <patch|minor|major> [--push]`** : bump sémantique, génération automatique du CHANGELOG depuis les commits conventionnels entre le dernier tag et HEAD, mise à jour de `pyproject.toml` + `agent_carbon/__init__.py`, commit `chore(release): X.Y.Z` et tag `vX.Y.Z`. Le push n'est effectué qu'avec `--push`. Validation blocante : arbre propre, branche `main`, pas de tag existant.
+
 ## [Non publié]
 
 ### Modifié

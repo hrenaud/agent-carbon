@@ -147,6 +147,32 @@ Voir [`docs/TODO-self-hosted-models.md`](docs/TODO-self-hosted-models.md) : coup
 dans `models` (la commande interactive, encore dense-only) et étape WebSearch dans la
 cascade de résolution. `resolve --set "P/M=repo:<actifs>"` gère désormais les MoE.
 
+## Release
+
+Un release bump la version sémantique, génère le CHANGELOG et crée le tag.
+
+```bash
+agent-carbon release bump <patch|minor|major> [--push]
+```
+
+- `patch` : corrections backward-compatible
+- `minor` : nouvelles fonctionnalités backward-compatibles
+- `major` : changements incompatibles
+
+Le process :
+
+1. Vérifie que l'arbre est propre, qu'on est sur `main`, et que le tag cible n'existe pas.
+2. Calcule la nouvelle version (ex. `0.1.0` → `0.1.1` en patch).
+3. Génère le CHANGELOG entre le dernier tag `v*` et HEAD en exploitant les commits conventionnels (`feat:`, `fix:`, etc.).
+4. Bump `pyproject.toml` + `agent_carbon/__init__.py`.
+5. Prepend le nouveau bloc dans `CHANGELOG.md`.
+6. Commit `chore(release): X.Y.Z` + tag `vX.Y.Z`.
+7. Option `--push` : `git push origin main --tags` (absent par défaut).
+
+Preuve : les tests `tests/test_release.py` (31 tests) couvrent le cycle complet.
+
+> **Note** : avant le premier tag `v*`, le CHANGELOG est maintenu manuellement (section « Pré-versioning »). Après le premier release, il est entièrement auto-généré.
+
 ## Hors périmètre actuel (coutures posées)
 
 Collecteurs tiers (Codex, inférence locale) en stubs ; `compute_live()` (instrumentation

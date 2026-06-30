@@ -21,6 +21,7 @@ from agent_carbon.report.cli import (
     render_tokens_by_model,
     render_uncovered,
 )
+from agent_carbon.release import ReleaseError, run as run_release
 from agent_carbon.resolve.cli import cmd_resolve
 from agent_carbon.statusline.line import render_statusline
 from agent_carbon.store.db import SQLiteStore
@@ -207,6 +208,19 @@ def main(argv: list[str] | None = None) -> int:
     p_res.add_argument("--forget", action="append", default=[], metavar="P/M")
     p_res.add_argument("--recompute", action="store_true")
 
+    p_rel = sub.add_parser(
+        "release",
+        help="bump sémantique, génère le CHANGELOG et créer le tag",
+    )
+    p_rel_sub = p_rel.add_subparsers(dest="rel_cmd", required=True)
+    p_bump = p_rel_sub.add_parser("bump", help="bump la version")
+    p_bump.add_argument(
+        "part", choices=("patch", "minor", "major"),
+        help="partie à bump (patch, minor ou major)",
+    )
+    p_bump.add_argument("--push", action="store_true",
+                        help="pusher main + tags après le release (optionnel)")
+
     args = parser.parse_args(argv)
     config = Config.load()
 
@@ -256,6 +270,15 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "resolve":
         return cmd_resolve(args)
+
+    if args.cmd == "release":
+        try:
+            new = run_release(args.part, push=args.push)
+            print(f"Release {new} créé (tag `v{new}`). Push avec --push.")
+            return 0
+        except ReleaseError as e:
+            print(f"Release bloqué : {e}", file=sys.stderr)
+            return 1
 
     return 1
 
