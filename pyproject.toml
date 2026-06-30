@@ -1,6 +1,6 @@
 [project]
 name = "agent-carbon"
-version = "0.2.0"
+version = "0.2.1"
 description = "Compteur d'impact environnemental multi-critères pour outils d'IA agentique (vendor-neutral, via EcoLogits)"
 requires-python = ">=3.10,<4"
 dependencies = [
