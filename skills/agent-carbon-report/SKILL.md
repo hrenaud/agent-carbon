@@ -51,3 +51,5 @@ Cette skill peut tourner sous plusieurs agents (Claude Code, OpenCode, Pi…). P
 - **Sinon** (runtime sans tool dédié) : présenter chaque question en clair, options **numérotées**, et **attendre** la réponse avant de continuer.
 
 Dans tous les cas : une option = une valeur exploitable, prévoir une saisie libre (« autre »), et ne **construire/lancer la commande qu'après** avoir reçu les réponses. Ne jamais deviner à la place de l'utilisateur ni exécuter avant réponse.
+
+> **Piège JSON (`AskUserQuestion` & tools MCP)** : l'entrée doit être du JSON **pur**. Chaque `question`/`label`/`description` est une chaîne littérale **déjà assemblée** — pas de concaténation (`"a" + "b"`), pas d'expression, pas de backslash non échappé (`\` → `\\` ou `/`). Sinon l'appel échoue avec « Invalid tool parameters / could not be parsed as JSON ».
