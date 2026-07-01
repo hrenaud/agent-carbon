@@ -1,6 +1,6 @@
 import json
 import os
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 
 from ecologits.utils.range_value import RangeValue
 
@@ -29,7 +29,10 @@ class Config:
         pue = data.get("datacenter_pue")
         if isinstance(pue, dict):
             data["datacenter_pue"] = RangeValue(min=pue["min"], max=pue["max"])
-        return cls(**data)
+        # Ignorer les clés inconnues (version future, édition manuelle) plutôt
+        # que planter tout le CLI sur un TypeError.
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
 
     def save(self, path: str = DEFAULT_CONFIG_PATH) -> None:
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)

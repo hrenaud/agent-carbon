@@ -1,4 +1,4 @@
-"""Collecteur pour les donnees d'exportation JSON d'Opencode/Crash et backfill SQLite."""
+"""Collecteur pour les donnees d'exportation JSON d'Opencode/Crush et backfill SQLite."""
 
 import glob
 import json
@@ -29,8 +29,15 @@ def _safe_int(value: int | float | None) -> int:
     return int(value)
 
 
+def _coalesce(primary, fallback):
+    """Retourne `primary` s'il est présent (pas None), sinon `fallback`. Un 0
+    explicite côté message est conservé — contrairement à `or`, qui le remplacerait
+    par le total de session (sur-comptage)."""
+    return primary if primary is not None else fallback
+
+
 class CrushCollector(Collector):
-    """Collecteur des exportations JSON d'Opencode/Crash.
+    """Collecteur des exportations JSON d'Opencode/Crush.
 
     Supporte 2 modes :
     - Mode export JSON : lit les fichiers `*.json` dans `root` (glob récursif).
@@ -63,7 +70,7 @@ class CrushCollector(Collector):
             yield from self._parse_export(path)
 
     def _parse_export(self, path: str) -> Iterator[InferenceEvent]:
-        """Parse un export JSON d'Opencode/Crash en InferenceEvent.
+        """Parse un export JSON d'Opencode/Crush en InferenceEvent.
         Seuls les messages 'assistant' sont produits.
         """
         with open(path, encoding="utf-8") as fh:
@@ -133,7 +140,7 @@ class CrushCollector(Collector):
             )
 
     def _backfill_from_db(self, db_path: str) -> Iterator[InferenceEvent]:
-        """Backfill depuis les tables SQLite d'Opencode/Crash.
+        """Backfill depuis les tables SQLite d'Opencode/Crush.
         Lit les sessions et messages directement depuis la DB locale.
         Seuls les messages 'assistant' compatibles sont produits.
         """
@@ -143,10 +150,17 @@ class CrushCollector(Collector):
         except sqlite3.Error:
             return
 
+        # try/finally garantit la fermeture même si l'itération est interrompue
+        # (exception en aval ou consommateur qui abandonne le générateur).
+        try:
+            yield from self._backfill_rows(conn)
+        finally:
+            conn.close()
+
+    def _backfill_rows(self, conn: sqlite3.Connection) -> Iterator[InferenceEvent]:
         try:
             sessions = conn.execute("SELECT * FROM session").fetchall()
         except sqlite3.Error:
-            conn.close()
             return
 
         # Indexer les sessions par id pour lookup rapide
@@ -160,7 +174,6 @@ class CrushCollector(Collector):
         try:
             messages = conn.execute("SELECT * FROM message").fetchall()
         except sqlite3.Error:
-            conn.close()
             return
 
         for msg in messages:
@@ -193,10 +206,11 @@ class CrushCollector(Collector):
 
             # Tokens (priorité au message, fallback session)
             raw_tokens = data.get("tokens") or {}
-            input_tokens = _safe_int(raw_tokens.get("input") or session["tokens_input"])
-            output_tokens = _safe_int(raw_tokens.get("output") or session["tokens_output"])
-            cache_read_tokens = _safe_int(raw_tokens.get("cache", {}).get("read") or session["tokens_cache_read"])
-            cache_creation_tokens = _safe_int(raw_tokens.get("cache", {}).get("write") or session["tokens_cache_write"])
+            raw_cache = raw_tokens.get("cache") or {}
+            input_tokens = _safe_int(_coalesce(raw_tokens.get("input"), session["tokens_input"]))
+            output_tokens = _safe_int(_coalesce(raw_tokens.get("output"), session["tokens_output"]))
+            cache_read_tokens = _safe_int(_coalesce(raw_cache.get("read"), session["tokens_cache_read"]))
+            cache_creation_tokens = _safe_int(_coalesce(raw_cache.get("write"), session["tokens_cache_write"]))
 
             # Timestamp
             msg_time = data.get("time") or {}
@@ -229,8 +243,6 @@ class CrushCollector(Collector):
                 active_seconds=active_seconds,
                 client=self.client,
             )
-
-        conn.close()
 
     @staticmethod
     def _calc_active_seconds(created_ms: int | float | None, completed_ms: int | float | None) -> float:

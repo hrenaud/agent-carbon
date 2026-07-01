@@ -18,6 +18,18 @@ def test_load_missing_file_returns_defaults(tmp_path):
     assert c.model_params == {}
 
 
+def test_load_ignores_unknown_keys(tmp_path):
+    """Une clé inconnue (version future, édition manuelle) ne fait pas planter
+    le chargement : elle est ignorée, les champs connus restent lus."""
+    path = tmp_path / "config.json"
+    path.write_text(
+        '{"electricity_mix_zone": "FRA", "future_option": 42}',
+        encoding="utf-8",
+    )
+    c = Config.load(str(path))
+    assert c.electricity_mix_zone == "FRA"
+
+
 def test_save_then_load_roundtrip(tmp_path):
     path = str(tmp_path / "config.json")
     c = Config(

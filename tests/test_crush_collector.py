@@ -327,6 +327,51 @@ def test_backfill_ignores_user_messages():
     os.rmdir(tmp_dir)
 
 
+def test_backfill_zero_message_tokens_not_overwritten_by_session():
+    """Un token message explicitement à 0 doit être conservé, pas remplacé par
+    le total de session (sinon sur-comptage)."""
+    tmp_dir = Path(tempfile.mkdtemp())
+    db_path = str(tmp_dir / "opencode.db")
+
+    conn = sqlite3.connect(db_path)
+    conn.executescript("""
+        CREATE TABLE session (id TEXT, title TEXT, directory TEXT,
+            model TEXT, tokens_input INTEGER, tokens_output INTEGER,
+            tokens_cache_read INTEGER, tokens_cache_write INTEGER,
+            time_created INTEGER, time_updated INTEGER);
+        CREATE TABLE message (id TEXT, session_id TEXT, data TEXT);
+    """)
+    conn.execute(
+        "INSERT INTO session (id, title, directory, model, "
+        "tokens_input, tokens_output, tokens_cache_read, tokens_cache_write, "
+        "time_created, time_updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        ("s1", "t", "/x/proj", json.dumps({"providerID": "a", "id": "m"}),
+         999, 999, 999, 999, 1000, 2000),
+    )
+    conn.execute(
+        "INSERT INTO message (id, session_id, data) VALUES (?, ?, ?)",
+        ("ma", "s1", json.dumps({
+            "role": "assistant",
+            "model": {"providerID": "a", "id": "m"},
+            "tokens": {"input": 0, "output": 0, "cache": {"read": 0, "write": 0}},
+            "time": {"created": 1000, "completed": 1500},
+        })),
+    )
+    conn.commit()
+    conn.close()
+
+    events = list(CrushCollector(backfill_db_path=db_path).collect())
+    assert len(events) == 1
+    e = events[0]
+    assert e.input_tokens == 0
+    assert e.output_tokens == 0
+    assert e.cache_read_tokens == 0
+    assert e.cache_creation_tokens == 0
+
+    os.unlink(db_path)
+    os.rmdir(tmp_dir)
+
+
 def test_backfill_missing_db_returns_empty():
     """Si la DB n'existe pas, le collecteur retourne []."""
     events = list(CrushCollector(backfill_db_path="/non/existent/path.db").collect())
