@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.2] — 2026-07-02
+
+### Features
+
+- skills posent des questions au lieu d'attendre des paramètres
+
+### Bug Fixes
+
+- supprime les espaces de fin des lignes de tableau du rapport
+- coverage exclut les `<synthetic>` des compteurs
+- backfill Opencode/Crush ne recopie plus les totaux de session
+
 ## [0.3.1] — 2026-07-02
 
 ### Bug Fixes
@@ -9,6 +21,7 @@
 ### Refactoring
 
 - dédup cascade HF et nettoyages
+
 ## [0.3.0] — 2026-07-01
 
 ### Features
@@ -16,6 +29,7 @@
 - cascade résolution params enrichie (3 méthodes), display modèles non couverts, CLI hf dans install, doc comparaison outils, AGENTS.md
 - add Opencode/Crush plugin and install integration
 - add CrushCollector for Opencode/Crash JSON exports and SQLite backfill
+
 ## [0.3.0] — 2026-07-01
 
 ### Features
@@ -33,6 +47,7 @@
 ### Documentation
 
 - synchroniser les fichiers du système de release dans la doc
+
 ## [0.2.0] — 2026-06-30
 
 ### Features
@@ -163,7 +178,7 @@
 - Merge feat/ingest-ux: sortie d'ingest claire et rassurante (couverture)
 - Merge feat/installer: installeur one-line (curl | bash)
 - Merge feat/mvp-implementation: MVP agent-carbon (collecte Claude Code, EcoLogits offline, DB+rapport+statusline)
-Toutes les évolutions notables du projet. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
+  Toutes les évolutions notables du projet. Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
 > Ce changelog est généré automatiquement par `agent-carbon release` entre deux tags.
 > Les entrées manuelles ci-dessous restent valables avant le premier tag `v*`.
