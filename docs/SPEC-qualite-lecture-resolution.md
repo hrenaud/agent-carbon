@@ -116,6 +116,35 @@ Exports JSON / SQLite (Opencode) ─┤→ InferenceEvent → SQLiteStore.ingest
 - Nom de modèle interpolé tel quel dans l'URL HF (`impact/params.py:22`) —
   risque faible (404), mais valider le format `org/name` avant requête.
 
+## 🔵 Évolution — étape « recherche web » dans la cascade de résolution
+
+> Reprise de l'ex-`docs/TODO-self-hosted-models.md` (Suite 4, seul item restant).
+> Spec/plan d'origine : `docs/superpowers/specs|plans/2026-06-29-self-hosted-models*`.
+
+- **Constat** : la cascade actuelle de `ModelParamsResolver.resolve` est
+  **1) registre EcoLogits → 2) cache config → 3) Hugging Face → file d'attente**.
+  Pour les modèles routés sous un nom non-HF (catalogues NVIDIA NIM
+  `build.nvidia.com`, ids `:free` exotiques), le repo HF réel n'est pas
+  déductible mécaniquement. Une **recherche web** le retrouve (fait à la main
+  pour nemotron/laguna : web → repo HF + archi MoE + couple actif/total).
+  Aujourd'hui, la skill `/agent-carbon-resolve` s'appuie sur la connaissance du
+  monde du LLM (étape « proposer un repo HF canonique ») mais sans étape
+  WebSearch explicite ni cadrée.
+- **Cascade cible (à valider)** : 1) EcoLogits → 2) Hugging Face → 3) **WebSearch** (trouver le repo HF canonique + l'archi/params depuis la
+  fiche modèle) → 4) **input utilisateur**. L'étape 3 relève du skill
+  `/agent-carbon-resolve` (le LLM fait la recherche et propose le repo + couple
+  MoE), pas du code CLI pur — la CLI reste le vérificateur déterministe (HF) et
+  le persisteur.
+- **À cadrer** : où vit l'étape web (skill vs helper), comment restituer
+  l'archi MoE (réutiliser `--set repo:<actifs>`), garde-fou « ne pas inventer »
+  conservé (params toujours issus de HF, jamais du texte web).
+
+## Rappels d'unité (piège)
+
+- Params EcoLogits = **milliards** partout (`ParamsResult.active/total`, `model_params`).
+- `safetensors.total` (HF) = compte **brut** → `÷ 1e9`.
+- Saisie `models` = milliards (ex. `7` pour 7B).
+
 ## Priorisation proposée
 
 1. **M1** (perf du hook Stop et des backfills) — TDD, sans dépendance.
@@ -123,3 +152,4 @@ Exports JSON / SQLite (Opencode) ─┤→ InferenceEvent → SQLiteStore.ingest
    peut produire des chiffres significativement faux sans le signaler).
 3. M3, N1, N2 (intégrité / provenance).
 4. N3, N4, mineurs (UX / robustesse).
+5. 🔵 Recherche web (évolution, à cadrer avant d'implémenter).

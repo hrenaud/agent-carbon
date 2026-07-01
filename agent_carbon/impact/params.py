@@ -214,7 +214,7 @@ class ModelParamsResolver:
     def _from_huggingface(self, provider: str, model: str) -> ParamsResult | None:
         """Tier 3 : params depuis le Hub via fetch_hf_params, puis mise en cache.
         arch toujours « dense » ici (fetch_hf_params suppose dense) ; l'affinage
-        MoE est différé (cf. « Suite 2 » de docs/TODO-self-hosted-models.md)."""
+        MoE passe par `resolve --set "P/M=repo:<actifs>"` (cf. resolve/cli.py)."""
         res = fetch_hf_params(model)
         if res is None:
             return None

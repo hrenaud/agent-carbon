@@ -143,9 +143,10 @@ Lancer : `.venv/bin/python -m pytest -q`.
 
 ## Backlog technique
 
-Voir [`docs/TODO-self-hosted-models.md`](docs/TODO-self-hosted-models.md) : couple MoE
-dans `models` (la commande interactive, encore dense-only) et étape WebSearch dans la
-cascade de résolution. `resolve --set "P/M=repo:<actifs>"` gère désormais les MoE.
+Voir [`docs/SPEC-qualite-lecture-resolution.md`](docs/SPEC-qualite-lecture-resolution.md) :
+correctifs qualité de la lecture des données et de la résolution des modèles
+(cache négatif HF, estimation 4-bit…), et l'évolution « étape WebSearch » dans la
+cascade de résolution. `resolve --set "P/M=repo:<actifs>"` gère les MoE.
 
 ## Release
 
