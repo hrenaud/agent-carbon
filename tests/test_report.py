@@ -92,6 +92,21 @@ def test_render_intensity_empty():
     assert render_intensity([]) == ""
 
 
+def test_model_tables_have_no_trailing_whitespace():
+    """Aucune ligne des tableaux par modèle ne doit finir par des espaces : ce
+    padding de la dernière colonne allonge inutilement les lignes et provoque un
+    retour à la ligne (tableau cassé) en terminal étroit."""
+    rows = [
+        {"model": "claude-opus-4-8", "hours": 1.0, "tokens": 566000,
+         "energy": 5.0, "gwp": 1.07, "adpe": 5e-6, "pe": 50.0, "wcf": 9.0},
+        {"model": "claude-haiku-4-5", "hours": 1.0, "tokens": 276000,
+         "energy": 1.0, "gwp": 0.014, "adpe": 1e-6, "pe": 10.0, "wcf": 2.0},
+    ]
+    for out in (render_intensity(rows), render_tokens_by_model(rows)):
+        for line in out.splitlines():
+            assert line == line.rstrip(), f"espaces de fin : {line!r}"
+
+
 def test_render_tokens_by_model_one_line_per_model_with_impact():
     rows = [
         {"model": "claude-opus-4-8", "tokens": 566000,

@@ -176,7 +176,9 @@ def _model_table(title: str, sec_header: str, headers: dict[str, str],
 
     def _line(name: str, sec: str, cell) -> str:
         cols = "  ".join(cell(c).ljust(col_w[c]) for c in _INTENSITY_COLS)
-        return f"  {name.ljust(name_w)}  {sec.rjust(sec_w)}  {cols}"
+        # rstrip : ne pas padder la dernière colonne (espaces de fin inutiles qui
+        # allongent la ligne et la font wrapper en terminal étroit).
+        return f"  {name.ljust(name_w)}  {sec.rjust(sec_w)}  {cols}".rstrip()
 
     out = [title, "", _line("modèle", sec_header, lambda c: headers[c])]
     for d in rows:
