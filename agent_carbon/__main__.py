@@ -165,13 +165,29 @@ def _read_stdin_json() -> dict | None:
         return None
 
 
-def _ingest_summary(new_count: int, cov: dict) -> str:
+def _ingest_summary(new_count: int, cov: dict, store=None) -> str:
     line = f"{new_count} events ingérés · {cov['measured']}/{cov['total']} mesurés"
     if cov["uncovered"]:
         line += (
             f" · {cov['uncovered']} non couverts "
             "(inférence locale ou fournisseurs tiers non modélisés — conservés, impact non estimé)"
         )
+        # Afficher les modèles non couverts (sauf <synthetic> à 0 token)
+        if store and cov["uncovered"] > 0:
+            rows = store.conn.execute(
+                "SELECT e.provider, e.model, COUNT(*) as cnt "
+                "FROM events e JOIN impacts i "
+                "ON e.session_id=i.session_id AND e.msg_id=i.msg_id "
+                "WHERE i.error IS NOT NULL "
+                "GROUP BY e.provider, e.model "
+                "ORDER BY cnt DESC"
+            ).fetchall()
+            # Filtrer les <synthetic> (0 token)
+            real_models = [r for r in rows if r["model"] != "<synthetic>"]
+            if real_models:
+                line += "\n  modèles concernés :"
+                for r in real_models:
+                    line += f"\n    - {r['model']} ({r['cnt']} events)"
     return line
 
 
@@ -238,7 +254,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             events = ClaudeCodeCollector(args.source).collect()
         n = store.ingest(events, _engine(config), config)
-        print(_ingest_summary(n, store.coverage()))
+        print(_ingest_summary(n, store.coverage(), store))
         return 0
 
     if args.cmd == "report":

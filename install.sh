@@ -63,6 +63,15 @@ AC_BIN="$INSTALL_DIR/.venv/bin/agent-carbon"
 [ -x "$AC_BIN" ] || die "Installation échouée : $AC_BIN introuvable."
 ok "agent-carbon installé dans le venv"
 
+# 3b. Installation du CLI HuggingFace (pour resolve --set via hf models info) --
+HF_BIN="$INSTALL_DIR/.venv/bin/hf"
+if [ ! -x "$HF_BIN" ]; then
+  say "Installation du CLI HuggingFace (hf) ..."
+  "$INSTALL_DIR/.venv/bin/python" -m pip install --quiet huggingface_hub[cli]
+  [ -x "$HF_BIN" ] || die "Installation du CLI hf échouée."
+  ok "CLI hf installé dans le venv"
+fi
+
 # 4. Expose la commande sur le PATH ------------------------------------------
 mkdir -p "$BIN_DIR"
 ln -sf "$AC_BIN" "$BIN_DIR/agent-carbon"

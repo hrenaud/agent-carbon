@@ -265,15 +265,48 @@ class SQLiteStore:
         self.conn.commit()
 
     def recompute_errors(self, engine: EcoLogitsEngine, config: Config) -> dict:
-        """Recalcule l'impact de tous les events en erreur (utile après ajout de
-        params). Retourne {before, after} = nombre de non couverts avant/après."""
+        """Recalcule l'impact des events en erreur pour les modèles dont les params
+        sont maintenant disponibles (utile après ajout de mappings via --set).
+        Retourne {before, after} = nombre de non couverts avant/après.
+        
+        Optimisation : ne recalcule que les modèles qui ont un mapping dans
+        config.model_params, évitant les calculs inutiles sur les modèles
+        toujours non couverts."""
         before = self.coverage()["uncovered"]
+        
+        # Déterminer les modèles à recalculer (ceux qui ont un mapping)
+        mapped_keys = set(config.model_params.keys())
+        
+        # Récupérer les events en erreur, puis filtrer par modèles résolus
         rows = self.conn.execute(
             "SELECT e.* FROM events e JOIN impacts i "
             "ON e.session_id=i.session_id AND e.msg_id=i.msg_id "
             "WHERE i.error IS NOT NULL"
         ).fetchall()
+        if mapped_keys:
+            rows = [r for r in rows if f"{r['provider']}/{r['model']}" in mapped_keys]
+        else:
+            rows = []
+        
+        # Pré-calculer les params pour chaque modèle unique (mise en cache)
+        seen_keys = set()
         for r in rows:
+            key = f"{r['provider']}/{r['model']}"
+            if key not in seen_keys:
+                seen_keys.add(key)
+                # Forcer la résolution et mise en cache des params
+                dummy_event = InferenceEvent(
+                    provider=r["provider"], model=r["model"],
+                    input_tokens=0, output_tokens=0,
+                    cache_creation_tokens=0, cache_read_tokens=0,
+                    timestamp="", project="", session_id="", msg_id="",
+                    active_seconds=0, client="")
+                engine.compute(dummy_event, config)
+        
+        # Recalculer les events (params déjà en cache)
+        # Commit par batch de 100 events pour éviter les timeout
+        batch_size = 100
+        for i, r in enumerate(rows):
             e = InferenceEvent(
                 provider=r["provider"], model=r["model"],
                 input_tokens=r["input_tokens"], output_tokens=r["output_tokens"],
@@ -283,9 +316,11 @@ class SQLiteStore:
                 session_id=r["session_id"], msg_id=r["msg_id"],
                 active_seconds=r["active_seconds"], client=r["client"])
             self._store_impact(e, engine.compute(e, config))
+            if (i + 1) % batch_size == 0:
+                self.conn.commit()
         self.conn.commit()
         after = self.coverage()["uncovered"]
-        return {"before": before, "after": after}
+        return {"before": before, "after": after, "recomputed": len(rows)}
 
     def coverage(self) -> dict:
         """Couverture de mesure : total, mesurés (impact estimé), non couverts

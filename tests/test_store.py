@@ -210,7 +210,8 @@ def test_recompute_errors_resolves_after_params_added(tmp_path):
                      "active": 7.0, "total": 7.0, "arch": "dense",
                      "source": "resolve", "hf_repo": "Org/Repo"}})
     delta = store.recompute_errors(_engine(), cfg)
-    assert delta == {"before": 2, "after": 1}   # x:y résolu, <synthetic> reste
+    assert delta["before"] == 2 and delta["after"] == 1   # x:y résolu, <synthetic> reste
+    assert delta.get("recomputed") == 1  # 1 event recalculé (x:y)
     covered = [r for r in store.rows_for_report() if r["model"] == "x:y"]
     assert covered and covered[0]["gwp_min"] > 0
 

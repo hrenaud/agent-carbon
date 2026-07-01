@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0] — 2026-07-01
+
+### Features
+
+- **Cascade de résolution des params enrichie** : `fetch_hf_params` / `fetch_moe_params_from_hf` tentent désormais 3 méthodes en cascade — metadata HF (`safetensors.total`), CLI `hf models info` (`used_storage`), puis index `model.safetensors.index.json` (taille brute) — avec estimation 4-bit (0.5 byte/param) pour les deux dernières. La CLI `hf` est recherchée dans PATH, le venv actif, puis les répertoires courants.
+- **`--set` MoE via `fetch_moe_params_from_hf`** : `resolve --set "provider/model=repo:<actif>"` utilise la cascade enrichie pour le total MoE (actif saisi, total estimé).
+- **Liste des modèles non couverts dans le résumé d'ingest** : `agent-carbon ingest` affiche désormais les modèles concernés avec le nombre d'events (exclusion des `<synthetic>` à 0 token).
+- **`recompute_errors` optimisé** : ne recalcule que les modèles ayant un mapping dans `config.model_params`, avec cache des params et commits par batch de 100 events. Retourne un champ `recomputed` en plus de `before`/`after`.
+- **`install.sh` installe le CLI `hf`** : le CLI HuggingFace est installé dans le venv via `pip install huggingface_hub[cli]` pour supporter `resolve --set` via `hf models info`.
+- **`docs/comparaison-donnees-outils.md`** : documentation comparative des données disponibles par outil (Claude Code JSONL, Opencode/CRUSH JSON/SQLite), avec les champs obligatoires et optionnels à mapper dans `InferenceEvent`.
+- **`AGENTS.md`** : nouveau fichier d'instructions projet pour les agents (index de la doc, rappels tests/sync clone/milliards). `CLAUDE.md` devient un lien symbolique pointant vers `AGENTS.md`.
+
 ## [0.2.1] — 2026-06-30
 
 ### Documentation

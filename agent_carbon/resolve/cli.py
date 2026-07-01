@@ -2,7 +2,7 @@ import json
 
 from agent_carbon.config import Config
 from agent_carbon.impact.engine import EcoLogitsEngine
-from agent_carbon.impact.params import fetch_hf_params
+from agent_carbon.impact.params import fetch_hf_params, fetch_moe_params_from_hf
 from agent_carbon.impact.resolver import ModelResolver
 from agent_carbon.store.db import SQLiteStore
 
@@ -36,19 +36,24 @@ def set_mappings(config, specs: list[str]) -> list[dict]:
                 results.append({"key": key, "repo": repo, "ok": False,
                                 "error": "active-format"})
                 continue
-        params = fetch_hf_params(repo)
-        if params is None:
-            results.append({"key": key, "repo": repo, "ok": False,
-                            "error": "hf-unresolved"})
-            continue
-        # MoE déclaré : le total reste celui de HF (safetensors), l'actif est saisi.
+        # Choisir la fonction de résolution selon qu'un actif est déclaré (MoE) ou non (dense).
         if active is not None:
+            params = fetch_moe_params_from_hf(repo, active)
+            if params is None:
+                results.append({"key": key, "repo": repo, "ok": False,
+                                "error": "hf-unresolved"})
+                continue
             if active <= 0 or active > params.total:
                 results.append({"key": key, "repo": repo, "ok": False,
                                 "error": "active-gt-total"})
                 continue
             entry_active, arch = active, "moe"
         else:
+            params = fetch_hf_params(repo)
+            if params is None:
+                results.append({"key": key, "repo": repo, "ok": False,
+                                "error": "hf-unresolved"})
+                continue
             entry_active, arch = params.active, params.arch
         config.model_params[key] = {
             "active": entry_active, "total": params.total, "arch": arch,
