@@ -1,0 +1,52 @@
+{
+  "info": {
+    "id": "sess-GH123",
+    "model": {"providerID": "anthropic", "modelID": "claude-sonnet"},
+    "time": {"created": 1719741600000}
+  },
+  "directory": "/Users/me/DEV/projA",
+  "messages": [
+    {
+      "data": {
+        "id": "msg-0",
+        "role": "user",
+        "content": "Fix the bug in auth module"
+      }
+    },
+    {
+      "data": {
+        "id": "msg-1",
+        "role": "assistant",
+        "model": {"providerID": "anthropic", "modelID": "claude-sonnet"},
+        "tokens": {
+          "input": 8427,
+          "output": 287,
+          "cache": {"read": 8020, "write": 7052}
+        },
+        "time": {"created": 1719741600000, "completed": 1719741630000},
+        "content": "I'll review the auth module."
+      }
+    },
+    {
+      "data": {
+        "id": "msg-2",
+        "role": "user",
+        "content": "Thanks, please also optimize the cache layer"
+      }
+    },
+    {
+      "data": {
+        "id": "msg-3",
+        "role": "assistant",
+        "model": {"providerID": "anthropic", "modelID": "claude-sonnet"},
+        "tokens": {
+          "input": 9200,
+          "output": 540,
+          "cache": {"read": 8500, "write": 0}
+        },
+        "time": {"created": 1719741700000, "completed": 1719741850000},
+        "content": "Here is the optimized cache layer."
+      }
+    }
+  ]
+}

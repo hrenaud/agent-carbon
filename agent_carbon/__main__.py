@@ -4,6 +4,7 @@ import os
 import sys
 
 from agent_carbon.collectors.claude_code import ClaudeCodeCollector
+from agent_carbon.collectors.crush import CrushCollector
 from agent_carbon.config import Config, DEFAULT_CONFIG_PATH
 from agent_carbon.config_detect import detect_zone, system_locale
 from agent_carbon.dates import parse_since
@@ -180,6 +181,8 @@ def main(argv: list[str] | None = None) -> int:
 
     p_ing = sub.add_parser("ingest", help="parser les transcripts et calculer l'impact")
     p_ing.add_argument("--source", default=_DEFAULT_SOURCE)
+    p_ing.add_argument("--source-crush", default=None,
+                       help="directory d'exports JSON Opencode/Crash, ou chemin vers opencode.db (backfill SQLite)")
     p_ing.add_argument("--db", default=_DEFAULT_DB)
 
     p_rep = sub.add_parser("report", help="afficher le rapport multi-critères")
@@ -226,7 +229,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "ingest":
         store = _store(args.db)
-        events = ClaudeCodeCollector(args.source).collect()
+        if args.source_crush:
+            # Détection du mode : si le chemin pointe vers une DB SQLite, backfill.
+            if args.source_crush.endswith(".db"):
+                events = CrushCollector(backfill_db_path=args.source_crush).collect()
+            else:
+                events = CrushCollector(root=args.source_crush).collect()
+        else:
+            events = ClaudeCodeCollector(args.source).collect()
         n = store.ingest(events, _engine(config), config)
         print(_ingest_summary(n, store.coverage()))
         return 0
