@@ -230,6 +230,41 @@ class SQLiteStore:
             out.append(row)
         return out
 
+    def intensity_by_client(self, since: str | None = None) -> list[dict]:
+        """Par outil client (claude-code, opencode, pi…), sur les seuls messages
+        à temps actif mesuré (>0) et impact estimé : heures actives, tokens de
+        sortie, et valeur centrale des 5 critères. Permet de comparer, à débit
+        égal, quel outil consomme le plus de tokens et a les impacts les plus
+        forts. ``since`` filtre la plage (cohérent avec les autres sections)."""
+        sql = (
+            "SELECT e.client AS client, SUM(e.active_seconds) AS sec, "
+            "SUM(e.output_tokens) AS toks, "
+            "SUM(i.energy_min) AS emin, SUM(i.energy_max) AS emax, "
+            "SUM(i.gwp_min) AS gmin, SUM(i.gwp_max) AS gmax, "
+            "SUM(i.adpe_min) AS amin, SUM(i.adpe_max) AS amax, "
+            "SUM(i.pe_min) AS pmin, SUM(i.pe_max) AS pmax, "
+            "SUM(i.wcf_min) AS wmin, SUM(i.wcf_max) AS wmax "
+            "FROM events e JOIN impacts i "
+            "ON e.session_id=i.session_id AND e.msg_id=i.msg_id "
+            "WHERE i.error IS NULL AND e.active_seconds > 0"
+        )
+        params: list = []
+        if since:
+            sql += " AND e.timestamp >= ?"
+            params.append(since)
+        sql += " GROUP BY e.client"
+        out = []
+        for r in self.conn.execute(sql, tuple(params)):
+            hours = (r["sec"] or 0) / 3600.0
+            if hours <= 0:
+                continue
+            row = {"client": r["client"] or "claude-code", "hours": hours, "tokens": r["toks"]}
+            for c, (lo, hi) in _CRIT_COLS.items():
+                row[c] = (r[lo] + r[hi]) / 2           # centrale (vue compacte)
+                row[f"{c}_min"], row[f"{c}_max"] = r[lo], r[hi]   # bornes (vue détaillée)
+            out.append(row)
+        return out
+
     def tokens_by_model(self, since: str | None = None) -> list[dict]:
         """Par modèle, sur la plage (``since`` optionnel) : tokens totaux
         utilisés (entrée + sortie + cache) et valeur centrale des 5 critères

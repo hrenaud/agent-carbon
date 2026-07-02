@@ -5,6 +5,7 @@ import sys
 
 from agent_carbon.collectors.claude_code import ClaudeCodeCollector
 from agent_carbon.collectors.crush import CrushCollector
+from agent_carbon.collectors.pi import PiCollector
 from agent_carbon.config import Config, DEFAULT_CONFIG_PATH
 from agent_carbon.config_detect import detect_zone, system_locale
 from agent_carbon.dates import parse_since
@@ -19,6 +20,7 @@ from agent_carbon.impact.resolver import ModelResolver
 from agent_carbon.report.cli import (
     render_estimated_note,
     render_intensity,
+    render_intensity_by_client,
     render_projects,
     render_report,
     render_tokens_by_model,
@@ -210,6 +212,8 @@ def main(argv: list[str] | None = None) -> int:
     p_ing.add_argument("--source", default=_DEFAULT_SOURCE)
     p_ing.add_argument("--source-crush", default=None,
                        help="directory d'exports JSON Opencode/Crush, ou chemin vers opencode.db (backfill SQLite)")
+    p_ing.add_argument("--source-pi", default=None,
+                       help="directory des sessions Pi (~/.pi/agent/sessions), ou fichier JSONL unique")
     p_ing.add_argument("--db", default=_DEFAULT_DB)
 
     p_rep = sub.add_parser("report", help="afficher le rapport multi-critères")
@@ -267,6 +271,8 @@ def main(argv: list[str] | None = None) -> int:
                 events = CrushCollector(backfill_db_path=args.source_crush).collect()
             else:
                 events = CrushCollector(root=args.source_crush).collect()
+        elif args.source_pi:
+            events = PiCollector(root=args.source_pi).collect()
         else:
             events = ClaudeCodeCollector(args.source).collect()
         before = _config_snapshot(config)
@@ -296,6 +302,11 @@ def main(argv: list[str] | None = None) -> int:
         intensity = render_intensity(store.intensity_by_model(args.since), detailed=args.detail)
         if intensity:
             out += "\n\n" + intensity
+        by_client = store.intensity_by_client(args.since)
+        if len(by_client) > 1:  # n'a de sens que si plusieurs outils sont présents
+            intensity_client = render_intensity_by_client(by_client, detailed=args.detail)
+            if intensity_client:
+                out += "\n\n" + intensity_client
         out += "\n\n" + _REPORT_FOOTER
         print(out)
         return 0

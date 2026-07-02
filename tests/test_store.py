@@ -80,6 +80,55 @@ def test_intensity_excludes_events_without_active_time(tmp_path):
     assert store.intensity_by_model() == []
 
 
+def test_intensity_by_client(tmp_path):
+    store = SQLiteStore(str(tmp_path / "c.db"))
+    events = [
+        InferenceEvent("anthropic", "claude-opus-4-8", 100, 600, 0, 0,
+                       "2026-06-27T10:00:00.000Z", "p", "s1", "u1",
+                       active_seconds=3600.0, client="claude-code"),
+        InferenceEvent("anthropic", "claude-opus-4-8", 100, 300, 0, 0,
+                       "2026-06-27T10:00:00.000Z", "p", "s2", "u2",
+                       active_seconds=1800.0, client="opencode"),
+    ]
+    store.ingest(events, _engine(), Config())
+    data = store.intensity_by_client()
+    assert len(data) == 2
+    by_client = {d["client"]: d for d in data}
+    assert abs(by_client["claude-code"]["hours"] - 1.0) < 0.01
+    assert by_client["claude-code"]["tokens"] == 600
+    assert abs(by_client["opencode"]["hours"] - 0.5) < 0.01
+    assert by_client["opencode"]["tokens"] == 300
+    assert by_client["claude-code"]["gwp"] > 0
+    assert by_client["claude-code"]["gwp_max"] >= by_client["claude-code"]["gwp_min"] > 0
+
+
+def test_intensity_by_client_filters_by_since(tmp_path):
+    store = SQLiteStore(str(tmp_path / "c.db"))
+    events = [
+        InferenceEvent("anthropic", "claude-opus-4-8", 100, 600, 0, 0,
+                       "2026-06-27T10:00:00.000Z", "p", "s1", "u1",
+                       active_seconds=3600.0, client="claude-code"),
+        InferenceEvent("anthropic", "claude-opus-4-8", 100, 400, 0, 0,
+                       "2026-06-28T10:00:00.000Z", "p", "s2", "u2",
+                       active_seconds=3600.0, client="claude-code"),
+    ]
+    store.ingest(events, _engine(), Config())
+    assert store.intensity_by_client()[0]["tokens"] == 1000
+    data = store.intensity_by_client(since="2026-06-28T00:00:00.000Z")
+    assert len(data) == 1
+    assert data[0]["tokens"] == 400
+
+
+def test_intensity_by_client_excludes_events_without_active_time(tmp_path):
+    store = SQLiteStore(str(tmp_path / "c.db"))
+    events = [
+        InferenceEvent("anthropic", "claude-opus-4-8", 100, 600, 0, 0,
+                       "2026-06-27T10:00:00.000Z", "p", "s", "u1", client="claude-code"),
+    ]
+    store.ingest(events, _engine(), Config())
+    assert store.intensity_by_client() == []
+
+
 def test_tokens_by_model_sums_all_token_types(tmp_path):
     store = SQLiteStore(str(tmp_path / "c.db"))
     # input 100 + output 200 + cache_creation 50 + cache_read 30 = 380 par event

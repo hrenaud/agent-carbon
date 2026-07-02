@@ -75,6 +75,9 @@ Dans Claude Code, tape la commande, ou demande en langage naturel :
 Le rapport a cinq sections : **impact total**, **projets les plus impactants**,
 **tokens & impact par modèle**, **modèles non couverts**, et **intensité par modèle**
 (impact par heure de travail — révèle qu'à débit égal, Opus émet bien plus que Haiku).
+Une sixième section, **intensité par outil**, apparaît automatiquement dès que tes
+données couvrent plusieurs outils (Claude Code, Opencode/CRUSH, Pi…) — elle révèle
+quel outil consomme le plus de tokens et a les impacts les plus forts, à débit égal.
 
 Options utiles du rapport : `--since 2026-06-27` (ou `27/06/26`) pour une période,
 `--detail` pour les fourchettes min–max par modèle/projet, `--all-projects` pour la

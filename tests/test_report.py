@@ -1,5 +1,6 @@
 from agent_carbon.report.cli import (
     render_intensity,
+    render_intensity_by_client,
     render_projects,
     render_report,
     render_tokens_by_model,
@@ -158,6 +159,43 @@ def test_render_intensity_detailed_shows_minmax():
     out = render_intensity([dict(_MINMAX_ROW)], detailed=True)  # hours=1 → /h = bornes
     assert "1–2" in out and "kgCO2eq" in out
     assert "~1.07" not in out
+
+
+def test_render_intensity_by_client_aligned_table_one_line_per_client():
+    rows = [
+        {"client": "claude-code", "hours": 1.0, "tokens": 566000,
+         "energy": 5.0, "gwp": 1.07, "adpe": 5e-6, "pe": 50.0, "wcf": 9.0},
+        {"client": "opencode", "hours": 1.0, "tokens": 276000,
+         "energy": 1.0, "gwp": 0.014, "adpe": 1e-6, "pe": 10.0, "wcf": 2.0},
+    ]
+    out = render_intensity_by_client(rows)
+    assert "tok/h" in out
+    assert "outil" in out                    # ligne d'en-tête du tableau
+    for icon in ("🌍", "⚡", "💧", "⛏", "🔥"):
+        assert icon in out
+    cc_line = next(l for l in out.splitlines() if "claude-code" in l)
+    assert "tok/h" not in cc_line             # « tok/h » n'est que dans l'en-tête
+    assert "kgCO2eq" in cc_line and "~566k" in cc_line
+    # trié par tok/h décroissant : claude-code (566k) avant opencode (276k)
+    assert out.index("claude-code") < out.index("opencode")
+
+
+def test_render_intensity_by_client_empty():
+    assert render_intensity_by_client([]) == ""
+
+
+def test_render_intensity_by_client_detailed_shows_minmax():
+    row = {
+        "client": "claude-code", "hours": 1.0, "tokens": 566000,
+        "gwp": 1.5, "gwp_min": 1.0, "gwp_max": 2.0,
+        "wcf": 7.5, "wcf_min": 5.0, "wcf_max": 10.0,
+        "adpe": 1.5e-5, "adpe_min": 1e-5, "adpe_max": 2e-5,
+        "energy": 7.5, "energy_min": 5.0, "energy_max": 10.0,
+        "pe": 75.0, "pe_min": 50.0, "pe_max": 100.0,
+    }
+    out = render_intensity_by_client([row], detailed=True)
+    assert "1–2" in out and "kgCO2eq" in out
+    assert "~1.5" not in out
 
 
 def test_render_uncovered_lists_tokens_and_suggests_resolve():

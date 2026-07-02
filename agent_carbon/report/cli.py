@@ -162,14 +162,14 @@ def _cell_detailed(lo: float, hi: float, criterion: str) -> str:
 
 
 def _model_table(title: str, sec_header: str, headers: dict[str, str],
-                 rows: list[dict]) -> str:
-    """Tableau aligné « une ligne par modèle » : colonne modèle, une seconde
-    colonne libre (tok/h, tokens…) et les 5 critères. ``rows`` :
+                 rows: list[dict], name_header: str = "modèle") -> str:
+    """Tableau aligné « une ligne par modèle » (ou par outil) : colonne nom,
+    une seconde colonne libre (tok/h, tokens…) et les 5 critères. ``rows`` :
     ``{name, second, sort, cells:{crit:str}}``, trié par ``sort`` décroissant."""
     if not rows:
         return ""
     rows = sorted(rows, key=lambda d: d["sort"], reverse=True)
-    name_w = max(len("modèle"), max(len(d["name"]) for d in rows))
+    name_w = max(len(name_header), max(len(d["name"]) for d in rows))
     sec_w = max(len(sec_header), max(len(d["second"]) for d in rows))
     col_w = {c: max(len(headers[c]), max(len(d["cells"][c]) for d in rows))
              for c in _INTENSITY_COLS}
@@ -180,7 +180,7 @@ def _model_table(title: str, sec_header: str, headers: dict[str, str],
         # allongent la ligne et la font wrapper en terminal étroit).
         return f"  {name.ljust(name_w)}  {sec.rjust(sec_w)}  {cols}".rstrip()
 
-    out = [title, "", _line("modèle", sec_header, lambda c: headers[c])]
+    out = [title, "", _line(name_header, sec_header, lambda c: headers[c])]
     for d in rows:
         out.append(_line(d["name"], d["second"], lambda c, d=d: d["cells"][c]))
     return "\n".join(out)
@@ -206,6 +206,29 @@ def render_intensity(rows: list[dict], detailed: bool = False) -> str:
     return _model_table(
         f"Intensité par modèle — par heure de travail effectif {suffix}",
         "tok/h", _COL_HEADER, table)
+
+
+def render_intensity_by_client(rows: list[dict], detailed: bool = False) -> str:
+    """Intensité par outil client (claude-code, opencode, pi…), par heure de
+    travail effectif : même format que ``render_intensity`` (par modèle) mais
+    agrégé par outil, pour comparer à débit égal quel outil consomme le plus
+    de tokens et a les impacts les plus forts."""
+    def _cells(r):
+        h = r["hours"]
+        if detailed:
+            return {c: _cell_detailed(r[f"{c}_min"] / h, r[f"{c}_max"] / h, c)
+                    for c in _INTENSITY_COLS}
+        return {c: _intensity_cell(r[c] / h, c) for c in _INTENSITY_COLS}
+    table = [{
+        "name": r["client"],
+        "second": _kilo(r["tokens"] / r["hours"]),
+        "sort": r["tokens"] / r["hours"],
+        "cells": _cells(r),
+    } for r in rows]
+    suffix = "(min–max)" if detailed else "(~ central)"
+    return _model_table(
+        f"Intensité par outil — par heure de travail effectif {suffix}",
+        "tok/h", _COL_HEADER, table, name_header="outil")
 
 
 def render_tokens_by_model(rows: list[dict], detailed: bool = False) -> str:
