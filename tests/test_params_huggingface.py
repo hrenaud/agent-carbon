@@ -5,6 +5,25 @@ from agent_carbon.config import Config
 from agent_carbon.impact.params import ModelParamsResolver, fetch_hf_params
 
 
+def test_huggingface_failure_not_retried_same_run(monkeypatch):
+    """M1a : un échec HF n'est pas retenté dans le même run (cache négatif mémoire)."""
+    import agent_carbon.impact.params as params_mod
+    call_count = [0]
+    mod = types.ModuleType("huggingface_hub")
+    def boom(repo_id, **kw):
+        call_count[0] += 1
+        raise OSError("offline")
+    mod.model_info = boom
+    monkeypatch.setitem(sys.modules, "huggingface_hub", mod)
+    # Neutraliser les méthodes 2 et 3 (CLI hf, index.json) : on ne compte que la cascade.
+    monkeypatch.setattr(params_mod, "_fetch_hf_cli_info", lambda repo: None)
+    monkeypatch.setattr(params_mod, "_fetch_safetensors_index_bytes", lambda repo: None)
+    r = ModelParamsResolver(Config())
+    assert r.resolve("ollama", "org/inconnu") is None
+    assert r.resolve("ollama", "org/inconnu") is None
+    assert call_count[0] == 1  # 2e resolve court-circuité par le cache négatif
+
+
 def _fake_hf(total, monkeypatch):
     """Injecte un faux module huggingface_hub avec model_info()."""
     mod = types.ModuleType("huggingface_hub")

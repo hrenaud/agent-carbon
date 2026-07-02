@@ -172,6 +172,9 @@ class ModelParamsResolver:
 
     def __init__(self, config):
         self.config = config
+        # M1a : clés « provider/model » dont la résolution HF a échoué dans ce
+        # run — évite de relancer la cascade réseau à chaque event du même modèle.
+        self._hf_failed: set[str] = set()
 
     def resolve(self, provider: str, model: str) -> ParamsResult | None:
         return (
@@ -215,10 +218,14 @@ class ModelParamsResolver:
         """Tier 3 : params depuis le Hub via fetch_hf_params, puis mise en cache.
         arch toujours « dense » ici (fetch_hf_params suppose dense) ; l'affinage
         MoE passe par `resolve --set "P/M=repo:<actifs>"` (cf. resolve/cli.py)."""
+        key = f"{provider}/{model}"
+        if key in self._hf_failed:
+            return None
         res = fetch_hf_params(model)
         if res is None:
+            self._hf_failed.add(key)
             return None
-        self.config.model_params[f"{provider}/{model}"] = {
+        self.config.model_params[key] = {
             "active": res.active, "total": res.total,
             "arch": res.arch, "source": res.source}
         return res
