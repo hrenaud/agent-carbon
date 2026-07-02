@@ -19,6 +19,25 @@ def _looks_moe(repo: str) -> bool:
     return bool(_MOE_NAME_RE.search(repo))
 
 
+# Détection du dtype depuis le nom du repo → octets par paramètre.
+# Ordre : du plus spécifique au plus général ; premier motif gagnant.
+_BYTES_PER_PARAM_PATTERNS: tuple[tuple[re.Pattern, float], ...] = (
+    (re.compile(r"4[-_]?bit|q4|int4|awq|gptq|mxfp4|nf4", re.IGNORECASE), 0.5),
+    (re.compile(r"8[-_]?bit|q8|int8|fp8", re.IGNORECASE), 1.0),
+    (re.compile(r"fp16|bf16|f16|half", re.IGNORECASE), 2.0),
+    (re.compile(r"fp32|f32", re.IGNORECASE), 4.0),
+)
+
+
+def _detect_bytes_per_param(repo: str) -> float | None:
+    """Octets/param déduits du nom du repo (`-4bit` → 0.5, `-fp16` → 2.0…).
+    None si le nom ne dit rien (dtype inconnu → fourchette, cf. Task M2b)."""
+    for pattern, bpp in _BYTES_PER_PARAM_PATTERNS:
+        if pattern.search(repo):
+            return bpp
+    return None
+
+
 @dataclass
 class ParamsResult:
     active: float
@@ -60,12 +79,10 @@ def _fetch_safetensors_index_bytes(repo: str) -> int | None:
         return None
 
 
-def _bytes_to_params_estimated(total_bytes: int) -> float:
-    """Estime le nombre de paramètres depuis la taille totale des fichiers.
-    Hypothèse : 4-bit quantized = 0.5 byte/paramètre (valeur par défaut).
-    Retourne les params en milliards."""
-    # 4-bit = 0.5 byte par paramètre
-    return (total_bytes / 0.5) / 1e9
+def _bytes_to_params_estimated(total_bytes: int, bytes_per_param: float) -> float:
+    """Estime le nombre de paramètres (en milliards) depuis la taille totale
+    des fichiers et le dtype détecté."""
+    return (total_bytes / bytes_per_param) / 1e9
 
 
 def _fetch_hf_cli_info(repo: str) -> dict | None:
@@ -139,21 +156,25 @@ def _fetch_hf_total_params(repo: str) -> tuple[float, list[str]] | None:
         except Exception:
             pass
 
-    # Méthode 2 : CLI `hf models info` (used_storage → params estimés 4bit)
+    bpp = _detect_bytes_per_param(repo)
+
+    # Méthode 2 : CLI `hf models info` (used_storage → params estimés via dtype)
     cli_info = _fetch_hf_cli_info(repo)
     if cli_info is not None:
         used_storage = cli_info.get("used_storage", 0)
-        if used_storage and used_storage > 0:
-            total = _bytes_to_params_estimated(used_storage)
+        if used_storage and used_storage > 0 and bpp is not None:
+            total = _bytes_to_params_estimated(used_storage, bpp)
             if total > 0:
-                return total, ["params-from-cli-used_storage"]
+                return total, ["params-from-cli-used_storage",
+                               f"params-bytes-per-param:{bpp}"]
 
     # Méthode 3 : fichiers safetensors via index.json (fallback final)
     total_bytes = _fetch_safetensors_index_bytes(repo)
-    if total_bytes is not None and total_bytes > 0:
-        total = _bytes_to_params_estimated(total_bytes)
+    if total_bytes is not None and total_bytes > 0 and bpp is not None:
+        total = _bytes_to_params_estimated(total_bytes, bpp)
         if total > 0:
-            return total, ["params-estimated-4bit"]
+            return total, ["params-estimated-from-files",
+                           f"params-bytes-per-param:{bpp}"]
 
     return None
 

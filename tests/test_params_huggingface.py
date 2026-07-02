@@ -2,7 +2,7 @@ import sys
 import types
 import pytest
 from agent_carbon.config import Config
-from agent_carbon.impact.params import ModelParamsResolver, fetch_hf_params
+from agent_carbon.impact.params import ModelParamsResolver, fetch_hf_params, _detect_bytes_per_param
 
 
 def test_huggingface_failure_not_retried_same_run(monkeypatch):
@@ -188,3 +188,35 @@ def test_moe_named_repo_keeps_moe_warning(monkeypatch):
     _fake_hf(35_000_000_000, monkeypatch)
     res = fetch_hf_params("Qwen/Qwen3.6-35B-A3B-Instruct")
     assert "moe-assumed-dense" in res.warnings
+
+
+@pytest.mark.parametrize("repo,expected", [
+    ("mlx-community/Qwen3.6-35B-A3B-4bit", 0.5),
+    ("org/model-q4_K_M-GGUF", 0.5),
+    ("org/model-MXFP4", 0.5),
+    ("org/model-int8", 1.0),
+    ("org/model-fp8", 1.0),
+    ("org/model-fp16", 2.0),
+    ("org/model-bf16", 2.0),
+    ("org/model-fp32", 4.0),
+    ("Qwen/Qwen2.5-7B", None),          # rien dans le nom → inconnu
+])
+def test_detect_bytes_per_param(repo, expected):
+    """M2a : le dtype est déduit du nom du repo (octets par paramètre)."""
+    assert _detect_bytes_per_param(repo) == expected
+
+
+def test_used_storage_uses_detected_dtype(monkeypatch):
+    """M2a : méthode 2 (used_storage) — un repo fp16 divise par 2 octets/param,
+    pas par 0.5 (l'ancien comportement surestimait 4×)."""
+    import agent_carbon.impact.params as params_mod
+    mod = types.ModuleType("huggingface_hub")
+    mod.model_info = lambda repo_id, **kw: types.SimpleNamespace(safetensors=None)
+    monkeypatch.setitem(sys.modules, "huggingface_hub", mod)
+    monkeypatch.setattr(params_mod, "_fetch_hf_cli_info",
+                        lambda repo: {"used_storage": 14_000_000_000})  # 14 Go
+    monkeypatch.setattr(params_mod, "_fetch_safetensors_index_bytes", lambda repo: None)
+    res = fetch_hf_params("org/model-fp16")
+    assert res is not None
+    assert res.total == pytest.approx(7.0)  # 14e9 octets / 2 o/param / 1e9 = 7 Md
+    assert "params-bytes-per-param:2.0" in res.warnings
