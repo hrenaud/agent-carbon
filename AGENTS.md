@@ -15,7 +15,10 @@ Compteur d'impact environnemental multi-critères pour les sessions d'IA, via
 | [docs/comparaison-donnees-outils.md](docs/comparaison-donnees-outils.md)           | comparatifs des informations des outils                                |
 | [docs/SPEC-qualite-lecture-resolution.md](docs/SPEC-qualite-lecture-resolution.md) | backlog technique : audit qualité lecture données & résolution modèles |
 
-> **À chaque tâche terminée : mettre à jour la doc concernée ET le CHANGELOG.**
+> **À chaque tâche terminée : mettre à jour la doc concernée.** Ne pas toucher au
+> CHANGELOG à la main : `agent-carbon release bump` le génère automatiquement
+> depuis les commits conventionnels au moment de la release (cf. § Réaliser une
+> release).
 
 ## Rappels projet
 
