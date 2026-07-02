@@ -72,14 +72,22 @@ if [ ! -x "$HF_BIN" ]; then
   ok "CLI hf installé dans le venv"
 fi
 
-# 4. Expose la commande sur le PATH ------------------------------------------
-mkdir -p "$BIN_DIR"
-ln -sf "$AC_BIN" "$BIN_DIR/agent-carbon"
-ok "Lien: $BIN_DIR/agent-carbon"
-case ":$PATH:" in
-  *":$BIN_DIR:"*) : ;;
-  *) warn "$BIN_DIR n'est pas dans votre PATH — ajoutez : export PATH=\"$BIN_DIR:\$PATH\"" ;;
-esac
+# 4. Expose la commande sur le PATH -------------------------------------------
+# Ne touche au lien global que pour l'install par défaut : un contributeur qui
+# teste une branche via AGENT_CARBON_DIR/AGENT_CARBON_REF ne doit jamais
+# écraser la commande `agent-carbon` de production.
+if [ "$INSTALL_DIR" = "$HOME/.agent-carbon/src" ]; then
+  mkdir -p "$BIN_DIR"
+  ln -sf "$AC_BIN" "$BIN_DIR/agent-carbon"
+  ok "Lien: $BIN_DIR/agent-carbon"
+  case ":$PATH:" in
+    *":$BIN_DIR:"*) : ;;
+    *) warn "$BIN_DIR n'est pas dans votre PATH — ajoutez : export PATH=\"$BIN_DIR:\$PATH\"" ;;
+  esac
+else
+  say "Répertoire de test (≠ install par défaut) — pas de lien global créé."
+  say "Binaire de test : $AC_BIN"
+fi
 
 # 5. Câblage Claude Code (statusline + hook d'ingestion) ---------------------
 if [ "${AGENT_CARBON_NO_CLAUDE:-0}" != "1" ]; then
