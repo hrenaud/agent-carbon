@@ -1,4 +1,5 @@
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
@@ -8,6 +9,14 @@ from ecologits.utils.range_value import RangeValue
 # TTL du cache négatif persisté : au-delà, on retente la résolution HF
 # (le modèle a pu être publié/renommé entre-temps).
 HF_NEGATIVE_TTL_DAYS = 7
+
+# Noms de modèles MoE : motif « a<N>b » isolé (ex. -A3B, …120b-a12b).
+_MOE_NAME_RE = re.compile(r"(?:^|[^a-z0-9])a\d+b(?:[^a-z0-9]|$)", re.IGNORECASE)
+
+
+def _looks_moe(repo: str) -> bool:
+    """Vrai si le nom du repo suggère une architecture MoE (motif « aNb »)."""
+    return bool(_MOE_NAME_RE.search(repo))
 
 
 @dataclass
@@ -156,8 +165,12 @@ def fetch_hf_params(repo: str) -> ParamsResult | None:
     if resolved is None:
         return None
     total, warnings = resolved
+    if _looks_moe(repo):
+        # Nom type MoE traité en dense : l'énergie serait surestimée (calculée
+        # sur le total au lieu des params actifs) — signalé en provenance.
+        warnings = ["moe-assumed-dense", *warnings]
     return ParamsResult(active=total, total=total, arch="dense",
-                        source="huggingface", warnings=["moe-assumed-dense", *warnings])
+                        source="huggingface", warnings=warnings)
 
 
 def fetch_moe_params_from_hf(repo: str, active: float) -> ParamsResult | None:

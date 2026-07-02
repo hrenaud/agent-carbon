@@ -174,3 +174,17 @@ def test_negative_cache_cleared_on_success(monkeypatch):
     res = r.resolve("ollama", "Qwen/Qwen2.5-7B")
     assert res is not None
     assert "ollama/Qwen/Qwen2.5-7B" not in cfg.hf_unresolved
+
+
+def test_dense_repo_has_no_moe_warning(monkeypatch):
+    """M3 : un repo au nom dense ne reçoit pas le warning moe-assumed-dense."""
+    _fake_hf(7_000_000_000, monkeypatch)
+    res = fetch_hf_params("Qwen/Qwen2.5-7B")
+    assert "moe-assumed-dense" not in res.warnings
+
+
+def test_moe_named_repo_keeps_moe_warning(monkeypatch):
+    """M3 : un nom type « …-A3B » (MoE) garde le warning."""
+    _fake_hf(35_000_000_000, monkeypatch)
+    res = fetch_hf_params("Qwen/Qwen3.6-35B-A3B-Instruct")
+    assert "moe-assumed-dense" in res.warnings
