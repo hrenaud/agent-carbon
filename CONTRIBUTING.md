@@ -17,6 +17,21 @@ python3 -m venv .venv
 
 Lancer la CLI en dev : `.venv/bin/python -m agent_carbon <commande>`.
 
+### Tester `install.sh` sur une branche (avant merge sur `main`)
+
+`install.sh` installe par défaut `main`, mais accepte `AGENT_CARBON_REF` pour
+pointer sur n'importe quelle branche ou tag — utile pour tester une contribution
+en conditions réelles (clone + venv + hook Claude Code) avant de merger :
+
+```bash
+AGENT_CARBON_REF=ma-branche AGENT_CARBON_DIR=/tmp/agent-carbon-test \
+  curl -fsSL https://raw.githubusercontent.com/hrenaud/agent-carbon/main/install.sh | bash
+```
+
+`AGENT_CARBON_DIR` évite d'écraser l'installation courante dans
+`~/.agent-carbon/src` pendant le test. Voir aussi `AGENT_CARBON_DB`,
+`AGENT_CARBON_NO_CLAUDE`, `AGENT_CARBON_NO_INGEST` en tête d'`install.sh`.
+
 ## Conventions
 
 - **Français** pour le code (commentaires, docstrings) et les messages utilisateur.
@@ -135,6 +150,8 @@ Lancer : `.venv/bin/python -m pytest -q`.
 - **Nouveau collecteur** (autre outil que Claude Code) : implémenter un collecteur qui
   émet des `InferenceEvent` (renseigner `provider`/`client`), sur le modèle de
   `ClaudeCodeCollector`. Le reste du pipeline est neutre vis-à-vis de la source.
+  Checklist complète à suivre à chaque intégration :
+  [`docs/checklist-nouvel-outil.md`](docs/checklist-nouvel-outil.md).
 - **Nouveau skill** : ajouter `skills/<nom>/SKILL.md` (frontmatter `name`/`description`).
   L'installeur le déploie par symlink dans `~/.claude/skills/`.
 - **Résolution de modèles** : la cascade vit dans `impact/params.py` ; la CLI
@@ -148,7 +165,7 @@ Lancer : `.venv/bin/python -m pytest -q`.
 
 ## Backlog technique
 
-Voir [`docs/SPEC-qualite-lecture-resolution.md`](docs/SPEC-qualite-lecture-resolution.md) :
+Voir [`docs/superpowers/specs/2026-07-02-qualite-lecture-resolution-design.md`](docs/superpowers/specs/2026-07-02-qualite-lecture-resolution-design.md) :
 correctifs qualité de la lecture des données et de la résolution des modèles
 (cache négatif HF, estimation 4-bit…), et l'évolution « étape WebSearch » dans la
 cascade de résolution. `resolve --set "P/M=repo:<actifs>"` gère les MoE.
@@ -178,6 +195,20 @@ Le process :
 Preuve : les tests `tests/test_release.py` (31 tests) couvrent le cycle complet.
 
 > **Note** : avant le premier tag `v*`, le CHANGELOG est maintenu manuellement (section « Pré-versioning »). Après le premier release, il est entièrement auto-généré.
+
+## Veille des dépendances (ecologits, huggingface_hub)
+
+Un workflow GitHub Actions (`.github/workflows/check-tool-updates.yml`, cron
+hebdomadaire + déclenchement manuel) compare les versions pinnées dans
+`pyproject.toml` (ecologits sur un tag git exact, huggingface_hub) aux dernières
+versions publiées (PyPI / tags GitHub via `agent_carbon/tool_updates.py`) et
+ouvre une issue si une nouvelle version existe.
+
+**Aucun bump automatique** : ecologits est épinglé sur un tag git précis car un
+bump mineur en `0.x` peut casser la cascade de calcul, et l'outil installé
+partage sa base avec le repo dev (cf. § Deux codebases, une base) — un bump
+silencieux serait risqué. L'issue sert juste de rappel ; le bump se fait à la
+main dans `pyproject.toml` après test.
 
 ## Hors périmètre actuel (coutures posées)
 

@@ -6,14 +6,14 @@ Compteur d'impact environnemental multi-critères pour les sessions d'IA, via
 
 ## Documentation (à tenir à jour)
 
-| Fichier                                                                            | Public / rôle                                                          |
-| ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| [README.md](README.md)                                                             | utilisateurs (non développeurs)                                        |
-| [CONTRIBUTING.md](CONTRIBUTING.md)                                                 | développeurs : architecture, schéma DB, dev, tests                     |
-| [docs/METHODOLOGY.md](docs/METHODOLOGY.md)                                         | comprendre comment les impacts sont calculés (échanges EcoLogits)      |
-| [CHANGELOG.md](CHANGELOG.md)                                                       | journal des évolutions                                                 |
-| [docs/comparaison-donnees-outils.md](docs/comparaison-donnees-outils.md)           | comparatifs des informations des outils                                |
-| [docs/SPEC-qualite-lecture-resolution.md](docs/SPEC-qualite-lecture-resolution.md) | backlog technique : audit qualité lecture données & résolution modèles |
+| Fichier                                                                                                                                          | Public / rôle                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| [README.md](README.md)                                                                                                                           | utilisateurs (non développeurs)                                        |
+| [CONTRIBUTING.md](CONTRIBUTING.md)                                                                                                               | développeurs : architecture, schéma DB, dev, tests                     |
+| [docs/METHODOLOGY.md](docs/METHODOLOGY.md)                                                                                                       | comprendre comment les impacts sont calculés (échanges EcoLogits)      |
+| [CHANGELOG.md](CHANGELOG.md)                                                                                                                     | journal des évolutions                                                 |
+| [docs/comparaison-donnees-outils.md](docs/comparaison-donnees-outils.md)                                                                         | comparatifs des informations des outils                                |
+| [docs/superpowers/specs/2026-07-02-qualite-lecture-resolution-design.md](docs/superpowers/specs/2026-07-02-qualite-lecture-resolution-design.md) | backlog technique : audit qualité lecture données & résolution modèles |
 
 > **À chaque tâche terminée : mettre à jour la doc concernée.** Ne pas toucher au
 > CHANGELOG à la main : `agent-carbon release bump` le génère automatiquement

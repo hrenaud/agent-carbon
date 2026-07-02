@@ -38,8 +38,10 @@ commande `agent-carbon`, déploie les skills, et câble la statusline + un hook
 d'ingestion dans `~/.claude/settings.json` (sans toucher à une statusline déjà prise
 par un autre outil). **Redémarre Claude Code** ensuite pour activer les skills.
 
-Variables optionnelles : `AGENT_CARBON_DIR`, `AGENT_CARBON_DB`, `AGENT_CARBON_REF`,
+Variables optionnelles : `AGENT_CARBON_DIR`, `AGENT_CARBON_DB`,
 `AGENT_CARBON_NO_CLAUDE=1` (ne pas modifier `settings.json`), `AGENT_CARBON_NO_INGEST=1`.
+(Contributeurs : voir `AGENT_CARBON_REF` dans [CONTRIBUTING.md](CONTRIBUTING.md) pour
+tester une branche.)
 
 ### Manuelle
 
