@@ -45,6 +45,13 @@ def _engine(config: Config) -> EcoLogitsEngine:
     return EcoLogitsEngine(ModelResolver(config.model_aliases))
 
 
+def _config_snapshot(config: Config) -> str:
+    """Empreinte des champs mutés par la résolution (pour ne sauver que si changé)."""
+    return json.dumps(
+        {"model_params": config.model_params, "hf_unresolved": config.hf_unresolved},
+        sort_keys=True, default=str)
+
+
 def _maybe_detect_mix(config: Config) -> None:
     if config.electricity_mix_zone is not None or not sys.stdin.isatty():
         return
@@ -252,7 +259,10 @@ def main(argv: list[str] | None = None) -> int:
                 events = CrushCollector(root=args.source_crush).collect()
         else:
             events = ClaudeCodeCollector(args.source).collect()
+        before = _config_snapshot(config)
         n = store.ingest(events, _engine(config), config)
+        if _config_snapshot(config) != before:
+            config.save()  # persiste caches positif/négatif résolus pendant l'ingest
         print(_ingest_summary(n, store.coverage(), store))
         return 0
 
@@ -286,7 +296,10 @@ def main(argv: list[str] | None = None) -> int:
         # Ingestion à la volée du transcript courant (idempotent) → impact à
         # jour même en cours de session, sans attendre le hook Stop.
         if transcript and os.path.exists(transcript):
+            before = _config_snapshot(config)
             store.ingest(ClaudeCodeCollector(transcript).collect(), _engine(config), config)
+            if _config_snapshot(config) != before:
+                config.save()
         print(render_statusline(store.rows_for_report(session_id=session_id)))
         return 0
 

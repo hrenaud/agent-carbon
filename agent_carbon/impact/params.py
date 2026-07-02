@@ -1,8 +1,13 @@
 import json
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 
 from ecologits.model_repository import ParametersMoE, models
 from ecologits.utils.range_value import RangeValue
+
+# TTL du cache négatif persisté : au-delà, on retente la résolution HF
+# (le modèle a pu être publié/renommé entre-temps).
+HF_NEGATIVE_TTL_DAYS = 7
 
 
 @dataclass
@@ -214,17 +219,32 @@ class ModelParamsResolver:
             active=float(entry["active"]), total=float(entry["total"]),
             arch=entry.get("arch", "dense"), source=entry.get("source", "user"))
 
+    def _negative_fresh(self, key: str) -> bool:
+        """Vrai si un échec HF récent (< TTL) est mémorisé en config pour key."""
+        ts = self.config.hf_unresolved.get(key)
+        if ts is None:
+            return False
+        try:
+            failed_at = datetime.fromisoformat(ts)
+        except (ValueError, TypeError):
+            return False
+        if failed_at.tzinfo is None:
+            failed_at = failed_at.replace(tzinfo=timezone.utc)
+        return datetime.now(timezone.utc) - failed_at < timedelta(days=HF_NEGATIVE_TTL_DAYS)
+
     def _from_huggingface(self, provider: str, model: str) -> ParamsResult | None:
         """Tier 3 : params depuis le Hub via fetch_hf_params, puis mise en cache.
         arch toujours « dense » ici (fetch_hf_params suppose dense) ; l'affinage
         MoE passe par `resolve --set "P/M=repo:<actifs>"` (cf. resolve/cli.py)."""
         key = f"{provider}/{model}"
-        if key in self._hf_failed:
+        if key in self._hf_failed or self._negative_fresh(key):
             return None
         res = fetch_hf_params(model)
         if res is None:
             self._hf_failed.add(key)
+            self.config.hf_unresolved[key] = datetime.now(timezone.utc).isoformat()
             return None
+        self.config.hf_unresolved.pop(key, None)
         self.config.model_params[key] = {
             "active": res.active, "total": res.total,
             "arch": res.arch, "source": res.source}

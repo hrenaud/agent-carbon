@@ -45,3 +45,11 @@ def test_save_then_load_roundtrip(tmp_path):
     assert loaded.datacenter_pue == RangeValue(min=1.2, max=1.2)
     assert loaded.datacenter_wue == 0.3
     assert loaded.model_params["ollama/qwen2.5:7b"]["total"] == 7e9
+
+
+def test_config_roundtrips_hf_unresolved(tmp_path):
+    """M1b : le cache négatif HF est persisté dans config.json."""
+    p = str(tmp_path / "config.json")
+    cfg = Config(hf_unresolved={"ollama/org/x": "2026-07-02T00:00:00+00:00"})
+    cfg.save(p)
+    assert Config.load(p).hf_unresolved == {"ollama/org/x": "2026-07-02T00:00:00+00:00"}

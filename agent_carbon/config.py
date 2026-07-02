@@ -18,6 +18,9 @@ class Config:
         default_factory=lambda: RangeValue(min=1.1, max=1.5))
     datacenter_wue: float = 0.0
     model_params: dict[str, dict] = field(default_factory=dict)
+    # M1b : cache négatif HF persisté — clé « provider/model » → ISO UTC du
+    # dernier échec de résolution. Purgé par succès, TTL côté résolveur.
+    hf_unresolved: dict[str, str] = field(default_factory=dict)
     local_wh_per_token: float | None = None
 
     @classmethod
