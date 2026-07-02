@@ -163,6 +163,8 @@ class SQLiteStore:
             "ON CONFLICT(provider, model) DO UPDATE SET occurrences = occurrences + 1",
             (provider, model, ts),
         )
+        # Commit immédiat requis : des lecteurs sur d'autres connexions (CLI models, tests) doivent voir les pending sans attendre le commit d'ingest, et une transaction ouverte bloquerait la migration à l'ouverture d'une autre connexion.
+        self.conn.commit()
 
     def list_pending(self) -> list[dict]:
         return [dict(r) for r in self.conn.execute(
