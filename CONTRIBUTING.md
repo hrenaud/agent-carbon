@@ -32,6 +32,11 @@ AGENT_CARBON_REF=ma-branche AGENT_CARBON_DIR=/tmp/agent-carbon-test \
 `~/.agent-carbon/src` pendant le test. Voir aussi `AGENT_CARBON_DB`,
 `AGENT_CARBON_NO_CLAUDE`, `AGENT_CARBON_NO_INGEST` en tête d'`install.sh`.
 
+Pour nettoyer une installation de test : `AGENT_CARBON_DIR=/tmp/agent-carbon-test
+AGENT_CARBON_PURGE_DB=1 bash uninstall.sh` (`uninstall.sh` défait tout ce que
+`install.sh` met en place ; utilise les mêmes variables `AGENT_CARBON_DIR` /
+`AGENT_CARBON_DB`, plus `AGENT_CARBON_PURGE_DB=1` pour aussi supprimer la base).
+
 ## Conventions
 
 - **Français** pour le code (commentaires, docstrings) et les messages utilisateur.

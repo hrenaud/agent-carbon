@@ -47,6 +47,17 @@ tester une branche.)
 
 Python ≥ 3.10, puis `pip install -e .`.
 
+### Désinstallation
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hrenaud/agent-carbon/main/uninstall.sh | bash
+```
+
+Retire le binaire, les skills, le câblage `~/.claude/settings.json` (statusline + hook
+d'ingestion), le plugin Opencode/CRUSH et le répertoire source. **La base
+`carbon.db` (historique d'impact) est conservée par défaut** — ajoute
+`AGENT_CARBON_PURGE_DB=1` avant la commande pour la supprimer aussi.
+
 ## Utilisation — via les skills (recommandé)
 
 Dans Claude Code, tape la commande, ou demande en langage naturel :
